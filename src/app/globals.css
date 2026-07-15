@@ -54,15 +54,8 @@ body {
   -webkit-text-stroke: 1.5px rgba(0, 212, 255, 0.55);
   paint-order: stroke fill;
   animation: hero-stroke-glow 5s ease-in-out infinite;
-  font-size: clamp(2rem, 9vw, 4rem);
   max-width: 100%;
   padding-inline: 0.25rem;
-}
-
-@media (min-width: 768px) {
-  .hero-title {
-    font-size: inherit;
-  }
 }
 
 @keyframes hero-stroke-glow {

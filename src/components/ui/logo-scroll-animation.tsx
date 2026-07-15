@@ -71,10 +71,10 @@ export function LogoScrollAnimation({
   return (
     <section
       ref={containerRef}
-      className="relative flex min-h-screen-safe w-full items-center justify-center overflow-x-hidden px-4 pb-4 pt-[calc(4.5rem+env(safe-area-inset-top))] md:min-h-[110vh] md:px-8 md:py-12 md:pt-0"
+      className="relative flex min-h-screen-safe w-full items-center justify-center overflow-x-hidden px-4 pb-4 pt-[calc(4.5rem+env(safe-area-inset-top))] md:min-h-[110vh] md:px-8 md:pb-12 md:pt-[calc(6.5rem+env(safe-area-inset-top,0px))]"
     >
       <div
-        className="relative flex w-full max-w-[1500px] flex-col items-center justify-center"
+        className="relative flex w-full max-w-[1500px] flex-col items-center justify-center md:mt-4"
         style={{
           perspective: "1200px",
         }}
@@ -144,7 +144,7 @@ function AnimatedLogo({
 
 function ElectricTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h1 className="hero-title font-medium tracking-tight md:text-8xl lg:text-9xl">
+    <h1 className="hero-title text-[clamp(2rem,9vw,4rem)] font-medium tracking-tight md:text-8xl lg:text-9xl">
       {children}
     </h1>
   );
