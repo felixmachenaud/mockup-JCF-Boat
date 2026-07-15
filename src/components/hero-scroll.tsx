@@ -3,10 +3,14 @@
 import { LogoScrollAnimation } from "@/components/ui/logo-scroll-animation";
 import { ChevronDown } from "lucide-react";
 
-export function HeroScroll() {
+type HeroScrollProps = {
+  onOpenAvailability?: () => void;
+};
+
+export function HeroScroll({ onOpenAvailability }: HeroScrollProps) {
   return (
     <section id="hero" className="relative scroll-mt-0">
-      <LogoScrollAnimation />
+      <LogoScrollAnimation onOpenAvailability={onOpenAvailability} />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex justify-center md:bottom-8">
         <a

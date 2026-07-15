@@ -8,13 +8,16 @@ import {
   useTransform,
 } from "framer-motion";
 import { HeroWaves } from "@/components/hero-waves";
+import { AvailabilityButton } from "@/components/availability-button";
 
 interface LogoScrollProps {
   title?: React.ReactNode;
+  onOpenAvailability?: () => void;
 }
 
 export function LogoScrollAnimation({
   title = "Explorez la côte avec",
+  onOpenAvailability,
 }: LogoScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -97,6 +100,10 @@ export function LogoScrollAnimation({
               scale={scale}
               translateY={translateY}
             />
+          </div>
+
+          <div className="relative z-10 mt-2 flex justify-center -translate-y-[2cm] md:mt-4">
+            <AvailabilityButton size="hero" onClick={onOpenAvailability} />
           </div>
         </div>
       </div>

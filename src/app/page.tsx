@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { PageBackground } from "@/components/page-background";
 import { SiteHeader } from "@/components/site-header";
 import { HeroScroll } from "@/components/hero-scroll";
@@ -8,8 +11,11 @@ import { ReviewsSection } from "@/components/reviews-section";
 import { ContactSection } from "@/components/contact-section";
 import { MobileNav } from "@/components/mobile-nav";
 import { HashScrollHandler } from "@/components/hash-scroll-handler";
+import { AvailabilityModal } from "@/components/availability-modal";
 
 export default function Home() {
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+
   return (
     <main className="relative min-h-screen pb-mobile-nav md:pb-0">
       <HashScrollHandler />
@@ -17,13 +23,17 @@ export default function Home() {
       <RestOfPageBlur />
       <SiteHeader />
       <div className="relative z-[2]">
-        <HeroScroll />
-        <FleetSection />
+        <HeroScroll onOpenAvailability={() => setAvailabilityOpen(true)} />
+        <FleetSection onOpenAvailability={() => setAvailabilityOpen(true)} />
         <TeamSection />
         <ReviewsSection />
         <ContactSection />
       </div>
       <MobileNav />
+      <AvailabilityModal
+        open={availabilityOpen}
+        onClose={() => setAvailabilityOpen(false)}
+      />
     </main>
   );
 }

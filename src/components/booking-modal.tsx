@@ -111,7 +111,7 @@ export function BookingModal({ boat, onClose }: BookingModalProps) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center md:p-4">
+    <div className="fixed inset-0 z-[110] flex items-end justify-center md:items-center md:p-4">
       <button
         type="button"
         aria-label="Fermer"

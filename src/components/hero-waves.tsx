@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 const VIEW_WIDTH = 2400;
 const VIEW_HEIGHT = 140;
 const CYCLES = 8;
@@ -18,16 +16,18 @@ function buildSinePath(centerY: number, width: number): string {
     const x = i * step;
     const y =
       centerY + AMPLITUDE * Math.sin((2 * Math.PI * x) / WAVELENGTH);
-    d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+    const xLabel = x.toFixed(2);
+    const yLabel = y.toFixed(2);
+    d += i === 0 ? `M ${xLabel} ${yLabel}` : ` L ${xLabel} ${yLabel}`;
   }
 
   return d;
 }
 
-export function HeroWaves() {
-  const topWave = useMemo(() => buildSinePath(52, VIEW_WIDTH), []);
-  const bottomWave = useMemo(() => buildSinePath(88, VIEW_WIDTH), []);
+const TOP_WAVE = buildSinePath(52, VIEW_WIDTH);
+const BOTTOM_WAVE = buildSinePath(88, VIEW_WIDTH);
 
+export function HeroWaves() {
   return (
     <div
       className="hero-waves pointer-events-none absolute inset-0 z-[1]"
@@ -44,32 +44,32 @@ export function HeroWaves() {
         >
           <g className="hero-waves__lines">
             <WaveLine
-              d={topWave}
+              d={TOP_WAVE}
               stroke="rgba(0, 212, 255, 0.45)"
               strokeWidth={9}
             />
             <WaveLine
-              d={bottomWave}
+              d={BOTTOM_WAVE}
               stroke="rgba(0, 212, 255, 0.45)"
               strokeWidth={9}
             />
             <WaveLine
-              d={topWave}
+              d={TOP_WAVE}
               stroke="rgba(0, 255, 255, 0.85)"
               strokeWidth={4.5}
             />
             <WaveLine
-              d={bottomWave}
+              d={BOTTOM_WAVE}
               stroke="rgba(0, 255, 255, 0.85)"
               strokeWidth={4.5}
             />
             <WaveLine
-              d={topWave}
+              d={TOP_WAVE}
               stroke="rgba(255, 255, 255, 0.92)"
               strokeWidth={2}
             />
             <WaveLine
-              d={bottomWave}
+              d={BOTTOM_WAVE}
               stroke="rgba(255, 255, 255, 0.92)"
               strokeWidth={2}
             />

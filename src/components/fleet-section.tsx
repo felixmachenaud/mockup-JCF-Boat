@@ -12,9 +12,14 @@ import {
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BookingModal } from "@/components/booking-modal";
+import { AvailabilityButton } from "@/components/availability-button";
 import { cn } from "@/lib/utils";
 
-export function FleetSection() {
+type FleetSectionProps = {
+  onOpenAvailability?: () => void;
+};
+
+export function FleetSection({ onOpenAvailability }: FleetSectionProps) {
   const [category, setCategory] = useState<BoatCategoryFilter>("all");
   const [bookingBoat, setBookingBoat] = useState<Boat | null>(null);
 
@@ -39,22 +44,26 @@ export function FleetSection() {
             </p>
           </div>
 
-          <div className="mx-auto mb-10 flex max-w-3xl flex-wrap justify-center gap-2 rounded-2xl border border-white/20 bg-black/30 p-2">
-            {boatCategories.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setCategory(id)}
-                className={cn(
-                  "min-h-11 rounded-xl px-4 py-3 text-sm font-medium transition-all active:scale-[0.98]",
-                  category === id
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mx-auto mb-10 flex max-w-4xl flex-col items-center justify-center gap-3 md:flex-row md:gap-4">
+            <div className="flex flex-wrap justify-center gap-2 rounded-2xl border border-white/20 bg-black/30 p-2">
+              {boatCategories.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setCategory(id)}
+                  className={cn(
+                    "min-h-11 rounded-xl px-4 py-3 text-sm font-medium transition-all active:scale-[0.98]",
+                    category === id
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <AvailabilityButton onClick={onOpenAvailability} />
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -108,7 +117,7 @@ export function FleetSection() {
                   {boat.slotsLeft && boat.available && (
                     <p className="mt-1 text-[11px] font-medium text-sky-300">
                       {boat.slotsLeft} créneau{boat.slotsLeft > 1 ? "x" : ""} restant
-                      {boat.slotsLeft > 1 ? "s" : ""}
+                      {boat.slotsLeft > 1 ? "s" : ""} cette semaine
                     </p>
                   )}
 
@@ -123,18 +132,6 @@ export function FleetSection() {
                 </div>
               </article>
             ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-400"
-              onClick={() => {
-                document.getElementById("fleet")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              Voir toutes les disponibilités
-            </Button>
           </div>
         </div>
       </section>
