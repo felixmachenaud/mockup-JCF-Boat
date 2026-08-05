@@ -19,19 +19,25 @@ export function HomePage({ content }: { content: SiteContent }) {
   const boats = featuredBoats(content.boats);
   const reviews = publishedReviews(content.reviews.items);
   const members = publishedTeam(content.team.members);
+  const headerProps = {
+    brandName: content.brand.name,
+    phone: content.contact.phone,
+    phoneDisplay: content.contact.phoneDisplay,
+  };
 
   return (
     <main className="relative min-h-screen pb-mobile-nav md:pb-0">
       <HashScrollHandler />
       <PageBackground />
       <RestOfPageBlur />
-      <SiteHeader />
+      <SiteHeader {...headerProps} />
       <div className="relative z-[2]">
         <HeroScroll
           title={content.hero.title}
           subtitle={content.hero.subtitle}
           ctaLabel={content.hero.ctaLabel}
           secondaryCtaLabel={content.hero.secondaryCtaLabel}
+          brandName={content.brand.name}
         />
         <PresentationSection content={content.presentation} />
         <FleetSection
@@ -44,7 +50,11 @@ export function HomePage({ content }: { content: SiteContent }) {
         <DestinationsSection
           content={content.destinations}
           locationTitle={content.pages.location.title}
+          locationEyebrow={content.pages.location.eyebrow}
+          locationBlurb={content.pages.location.subtitle}
           calanquesTitle={content.pages.calanques.title}
+          calanquesEyebrow={content.pages.calanques.eyebrow}
+          calanquesBlurb={content.pages.calanques.subtitle}
         />
         <TeamSection
           eyebrow={content.team.eyebrow}

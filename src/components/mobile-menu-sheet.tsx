@@ -24,7 +24,17 @@ const mainLinks = [
   { href: "/#contact", label: "Contact" },
 ];
 
-export function MobileMenuSheet() {
+type MobileMenuSheetProps = {
+  brandName?: string;
+  phone?: string;
+  phoneDisplay?: string;
+};
+
+export function MobileMenuSheet({
+  brandName = "JCF Boat",
+  phone = "0675742581",
+  phoneDisplay = "06 75 74 25 81",
+}: MobileMenuSheetProps) {
   const pathname = usePathname();
 
   return (
@@ -49,7 +59,7 @@ export function MobileMenuSheet() {
             Navigation
           </SheetTitle>
           <p className="text-left text-sm text-white/55">
-            JCF Boat Services · Cassis
+            {brandName} · Cassis
           </p>
         </SheetHeader>
 
@@ -81,11 +91,11 @@ export function MobileMenuSheet() {
 
         <SheetClose asChild>
           <a
-            href="tel:0675742581"
+            href={`tel:${phone}`}
             className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 text-sm font-semibold text-white"
           >
             <Phone className="h-4 w-4" />
-            06 75 74 25 81
+            {phoneDisplay}
           </a>
         </SheetClose>
       </SheetContent>

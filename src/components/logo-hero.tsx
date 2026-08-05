@@ -5,7 +5,7 @@ export function LogoHero() {
     <div className="relative flex h-full w-full items-center justify-center">
       <img
         src="/logo_white.png"
-        alt="JCF Boat Services"
+        alt="JCF Boat"
         draggable={false}
         decoding="async"
         fetchPriority="high"

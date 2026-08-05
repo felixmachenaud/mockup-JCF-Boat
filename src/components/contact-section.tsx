@@ -69,7 +69,7 @@ export function ContactSection({ contact }: ContactSectionProps) {
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link href="/bateaux">{contact.ctaCallLabel}</Link>
+              <a href={`tel:${contact.phone}`}>{contact.ctaCallLabel}</a>
             </Button>
             <Button
               asChild
@@ -77,7 +77,7 @@ export function ContactSection({ contact }: ContactSectionProps) {
               size="lg"
               className="w-full border-white/30 bg-transparent text-white hover:bg-white/10 sm:w-auto"
             >
-              <Link href="/location-bateau-cassis">Réserver</Link>
+              <Link href="/bateaux">Voir les bateaux</Link>
             </Button>
           </div>
         </div>

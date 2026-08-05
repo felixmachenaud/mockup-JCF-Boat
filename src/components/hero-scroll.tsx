@@ -8,6 +8,7 @@ type HeroScrollProps = {
   subtitle?: string;
   ctaLabel?: string;
   secondaryCtaLabel?: string;
+  brandName?: string;
 };
 
 export function HeroScroll({
@@ -15,6 +16,7 @@ export function HeroScroll({
   subtitle,
   ctaLabel,
   secondaryCtaLabel,
+  brandName,
 }: HeroScrollProps) {
   return (
     <section id="hero" className="relative scroll-mt-0">
@@ -23,6 +25,7 @@ export function HeroScroll({
         subtitle={subtitle}
         ctaLabel={ctaLabel}
         secondaryCtaLabel={secondaryCtaLabel}
+        brandName={brandName}
       />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex justify-center md:bottom-8">

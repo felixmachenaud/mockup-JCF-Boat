@@ -119,13 +119,13 @@ export function ContactMessageForm() {
         />
       </div>
 
-      {/* Honeypot anti-spam */}
+      {/* Honeypot anti-spam — hors écran (évite autofill password managers) */}
       <input
         type="text"
         name="website"
         tabIndex={-1}
         autoComplete="off"
-        className="hidden"
+        className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
         aria-hidden="true"
       />
 

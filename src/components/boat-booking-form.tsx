@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -9,9 +9,26 @@ const fieldClass =
 
 const labelClass = "mb-1.5 block text-sm font-medium tracking-wide text-white md:text-base";
 
+function localTodayISO(): string {
+  // Europe/Paris local calendar date (évite le décalage UTC avant ~02h)
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+const FALLBACK_PERIODS = [
+  { value: "matinee", label: "Matinée" },
+  { value: "apres-midi", label: "Après-midi" },
+];
+
 type BoatBookingFormProps = {
   boatName: string;
   maxPassengers?: number;
+  /** Labels issus de la grille tarifaire du bateau */
+  periodOptions?: string[];
   phoneDisplay?: string;
   phoneHref?: string;
   className?: string;
@@ -20,12 +37,21 @@ type BoatBookingFormProps = {
 export function BoatBookingForm({
   boatName,
   maxPassengers = 12,
+  periodOptions,
   phoneDisplay,
   phoneHref,
   className,
 }: BoatBookingFormProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+
+  const periods = useMemo(() => {
+    const fromBoat = (periodOptions ?? [])
+      .map((label) => label.trim())
+      .filter(Boolean);
+    if (fromBoat.length === 0) return FALLBACK_PERIODS;
+    return fromBoat.map((label) => ({ value: label, label }));
+  }, [periodOptions]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -68,7 +94,8 @@ export function BoatBookingForm({
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localTodayISO();
+  const useSelect = periods.length > 2;
 
   return (
     <div
@@ -84,11 +111,11 @@ export function BoatBookingForm({
         Envoyez-nous votre réservation
       </h2>
       <p className="mt-3 max-w-3xl text-base leading-relaxed text-white md:text-lg">
-        Indiquez la date, le nom du bateau, le créneau (matinée ou après-midi), le nombre de
-        passagers, ainsi que vos notes ou informations utiles.
+        Indiquez la date, le bateau, le créneau tarifaire, le nombre de passagers, ainsi que
+        vos notes ou informations utiles.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="booking-name" className={labelClass}>
@@ -174,30 +201,50 @@ export function BoatBookingForm({
               className={fieldClass}
             />
           </div>
-          <fieldset>
-            <legend className={labelClass}>Créneau *</legend>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="flex min-h-[3.25rem] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white has-[:checked]:border-sky-200/60 has-[:checked]:bg-sky-400/25 md:text-base">
-                <input
-                  type="radio"
-                  name="period"
-                  value="matinee"
-                  required
-                  className="accent-sky-300"
-                />
-                Matinée
+          {useSelect ? (
+            <div>
+              <label htmlFor="booking-period" className={labelClass}>
+                Créneau *
               </label>
-              <label className="flex min-h-[3.25rem] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white has-[:checked]:border-sky-200/60 has-[:checked]:bg-sky-400/25 md:text-base">
-                <input
-                  type="radio"
-                  name="period"
-                  value="apres-midi"
-                  className="accent-sky-300"
-                />
-                Après-midi
-              </label>
+              <select
+                id="booking-period"
+                name="period"
+                required
+                defaultValue=""
+                className={fieldClass}
+              >
+                <option value="" disabled>
+                  Choisir…
+                </option>
+                {periods.map((p) => (
+                  <option key={p.value} value={p.value} className="bg-slate-900 text-white">
+                    {p.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          </fieldset>
+          ) : (
+            <fieldset>
+              <legend className={labelClass}>Créneau *</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {periods.map((p) => (
+                  <label
+                    key={p.value}
+                    className="flex min-h-[3.25rem] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-3 py-2 text-sm text-white has-[:checked]:border-sky-200/60 has-[:checked]:bg-sky-400/25 md:text-base"
+                  >
+                    <input
+                      type="radio"
+                      name="period"
+                      value={p.value}
+                      required
+                      className="accent-sky-300"
+                    />
+                    {p.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
         </div>
 
         <div>
@@ -218,7 +265,7 @@ export function BoatBookingForm({
           name="website"
           tabIndex={-1}
           autoComplete="off"
-          className="hidden"
+          className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
           aria-hidden="true"
         />
 

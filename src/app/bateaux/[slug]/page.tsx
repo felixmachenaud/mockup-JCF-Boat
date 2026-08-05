@@ -78,6 +78,7 @@ export default async function BoatDetailPage({ params }: Props) {
     { label: "Motorisation", value: boat.motor },
     { label: "Permis", value: boat.license },
     { label: "Type", value: boat.type },
+    { label: "Année", value: boat.year > 0 ? String(boat.year) : "" },
     { label: "Départ", value: boat.location },
   ].filter((s) => s.value.trim().length > 0);
 
@@ -94,7 +95,7 @@ export default async function BoatDetailPage({ params }: Props) {
           offers: {
             "@type": "Offer",
             priceCurrency: "EUR",
-            price: boat.pricePerDay || fromPrice,
+            price: fromPrice,
             availability: boat.available
               ? "https://schema.org/InStock"
               : "https://schema.org/OutOfStock",
@@ -103,7 +104,11 @@ export default async function BoatDetailPage({ params }: Props) {
         }}
       />
       <PageBackground />
-      <SiteHeader />
+      <SiteHeader
+        brandName={content.brand.name}
+        phone={content.contact.phone}
+        phoneDisplay={content.contact.phoneDisplay}
+      />
 
       <article className="relative z-[2] pb-20 pt-[calc(5.5rem+env(safe-area-inset-top))] md:pb-28 md:pt-32">
         <div className="mx-auto max-w-5xl px-4 md:px-8">
@@ -149,6 +154,7 @@ export default async function BoatDetailPage({ params }: Props) {
               <div className="rounded-2xl border border-white/15 bg-black/30 p-5 md:p-7">
                 <p className="text-sm font-medium tracking-[0.22em] text-sky-300 uppercase md:text-base">
                   {categoryLabel(boat.category)}
+                  {boat.rating > 0 ? ` · ${boat.rating}/5` : ""}
                 </p>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-5xl">
                   {boat.name}
@@ -195,6 +201,19 @@ export default async function BoatDetailPage({ params }: Props) {
                     </ul>
                   </div>
                 ) : null}
+
+                {boat.tags.length > 0 ? (
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {boat.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-sky-300/30 bg-sky-500/15 px-3 py-1 text-xs font-medium text-sky-100"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="mt-6">
@@ -223,6 +242,11 @@ export default async function BoatDetailPage({ params }: Props) {
               Inclus : {boat.includedServices.join(" · ")}
             </p>
           ) : null}
+          {boat.optionalServices.length > 0 ? (
+            <p className="mt-2 text-sm text-white/85 md:text-base">
+              Options : {boat.optionalServices.join(" · ")}
+            </p>
+          ) : null}
         </div>
 
         {/* Formulaire pleine largeur */}
@@ -230,6 +254,7 @@ export default async function BoatDetailPage({ params }: Props) {
           <BoatBookingForm
             boatName={boat.name}
             maxPassengers={boat.capacity}
+            periodOptions={boat.pricingRows.map((r) => r.label).filter(Boolean)}
             phoneDisplay={content.contact.phoneDisplay}
             phoneHref={content.contact.phone}
             className="mx-auto max-w-6xl"

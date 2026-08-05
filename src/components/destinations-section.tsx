@@ -4,13 +4,21 @@ import type { SiteContent } from "@/lib/site-content";
 type Props = {
   content: SiteContent["destinations"];
   locationTitle: string;
+  locationEyebrow: string;
+  locationBlurb: string;
   calanquesTitle: string;
+  calanquesEyebrow: string;
+  calanquesBlurb: string;
 };
 
 export function DestinationsSection({
   content,
   locationTitle,
+  locationEyebrow,
+  locationBlurb,
   calanquesTitle,
+  calanquesEyebrow,
+  calanquesBlurb,
 }: Props) {
   return (
     <section
@@ -36,14 +44,12 @@ export function DestinationsSection({
             className="group rounded-3xl border border-white/15 bg-black/30 p-8 transition hover:border-white/30 hover:bg-black/40"
           >
             <p className="text-xs font-medium tracking-[0.2em] text-sky-300 uppercase">
-              Location
+              {locationEyebrow}
             </p>
             <h3 className="mt-3 text-2xl font-semibold text-white group-hover:underline">
               {locationTitle}
             </h3>
-            <p className="mt-3 text-sm text-white/70">
-              Pourquoi louer à Cassis, départ du port, flotte adaptée à votre niveau.
-            </p>
+            <p className="mt-3 text-sm text-white/70">{locationBlurb}</p>
             <span className="mt-6 inline-block text-sm font-medium text-sky-300">
               Découvrir →
             </span>
@@ -54,14 +60,12 @@ export function DestinationsSection({
             className="group rounded-3xl border border-white/15 bg-black/30 p-8 transition hover:border-white/30 hover:bg-black/40"
           >
             <p className="text-xs font-medium tracking-[0.2em] text-sky-300 uppercase">
-              Destinations
+              {calanquesEyebrow}
             </p>
             <h3 className="mt-3 text-2xl font-semibold text-white group-hover:underline">
               {calanquesTitle}
             </h3>
-            <p className="mt-3 text-sm text-white/70">
-              Port-Miou, Port-Pin, En-Vau… les calanques accessibles en bateau.
-            </p>
+            <p className="mt-3 text-sm text-white/70">{calanquesBlurb}</p>
             <span className="mt-6 inline-block text-sm font-medium text-sky-300">
               Explorer →
             </span>

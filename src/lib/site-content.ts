@@ -221,7 +221,7 @@ const defaultTeamMembers: CmsTeamMember[] = [
     name: "L'équipe JCF Boat",
     role: "Accueil & briefing",
     bio: "Basés au port de Cassis, nous vous accompagnons pour choisir le bateau et préparer votre sortie.",
-    image: "/équipe.jpg",
+    image: "/equipe.jpg",
     published: true,
     displayOrder: 0,
   },
@@ -288,13 +288,13 @@ export const DEFAULT_CONTENT: SiteContent = {
     title: "Explorez la côte avec",
     subtitle: "Location de bateaux à Cassis — calanques, Méditerranée, briefing inclus.",
     ctaLabel: "Nous contacter",
-    secondaryCtaLabel: "Réserver",
+    secondaryCtaLabel: "Voir les bateaux",
   },
   presentation: {
     eyebrow: "JCF Boat",
     title: "Une expérience locale, simple et sûre",
     text: "Entreprise familiale basée au port de Cassis, nous proposons une flotte soignée pour explorer les calanques en toute confiance — avec ou sans permis.",
-    image: "/équipe.jpg",
+    image: "/equipe.jpg",
     highlights: [
       {
         id: "h1",
@@ -330,7 +330,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     subtitle:
       "Accueil sur place au port de Cassis, conseils d'itinéraire et briefing personnalisé.",
     ctaLabel: "Nous contacter",
-    image: "/équipe.jpg",
+    image: "/equipe.jpg",
     members: defaultTeamMembers,
   },
   reviews: {
@@ -350,7 +350,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     email: "contact@jcfboat.fr",
     address: "Port de Cassis, 13260",
     hours: "8h – 20h · Avril à Octobre",
-    ctaCallLabel: "Voir les bateaux",
+    ctaCallLabel: "Appeler",
   },
   boats: defaultBoats,
   calanques: defaultCalanques,
@@ -388,6 +388,14 @@ function bool(v: unknown, fallback: boolean): boolean {
 
 function strArr(v: unknown, fallback: string[] = []): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : fallback;
+}
+
+/** ASCII-safe public paths (évite 404 Linux/Vercel sur filenames accentués NFD/NFC). */
+function publicImagePath(v: unknown, fallback: string): string {
+  const raw = str(v, fallback);
+  const ascii = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/\/equipe\.jpg$/i.test(ascii)) return "/equipe.jpg";
+  return raw;
 }
 
 function nullablePrice(v: unknown): number | null {
@@ -501,7 +509,7 @@ function normalizeMember(raw: unknown, index: number): CmsTeamMember {
     name: str(r.name, base.name),
     role: str(r.role, base.role),
     bio: str(r.bio, base.bio),
-    image: str(r.image, base.image),
+    image: publicImagePath(r.image, base.image),
     published: bool(r.published, true),
     displayOrder: num(r.displayOrder, index),
   };
@@ -536,7 +544,7 @@ function normalizeDestinationPage(
     practicalInfo: str(r.practicalInfo, fallback.practicalInfo),
     safetyInfo: str(r.safetyInfo, fallback.safetyInfo),
     ctaLabel: str(r.ctaLabel, fallback.ctaLabel),
-    image: str(r.image, fallback.image),
+    image: publicImagePath(r.image, fallback.image),
     featuredBoatIds: strArr(r.featuredBoatIds, fallback.featuredBoatIds),
     seoTitle: str(r.seoTitle, legacy?.title ?? fallback.seoTitle),
     seoDescription: str(
@@ -586,6 +594,10 @@ export function mergeContent(
     presentation: {
       ...DEFAULT_CONTENT.presentation,
       ...(o.presentation ?? {}),
+      image: publicImagePath(
+        o.presentation?.image,
+        DEFAULT_CONTENT.presentation.image,
+      ),
       highlights: highlightsRaw.map(normalizeHighlight),
     },
     fleet: { ...DEFAULT_CONTENT.fleet, ...(o.fleet ?? {}) },
@@ -593,6 +605,7 @@ export function mergeContent(
     team: {
       ...DEFAULT_CONTENT.team,
       ...(o.team ?? {}),
+      image: publicImagePath(o.team?.image, DEFAULT_CONTENT.team.image),
       members: membersRaw.map(normalizeMember),
     },
     reviews: {
@@ -712,7 +725,7 @@ export function emptyTeamMember(): CmsTeamMember {
     name: "",
     role: "",
     bio: "",
-    image: "/équipe.jpg",
+    image: "/equipe.jpg",
     published: true,
     displayOrder: 99,
   };

@@ -18,7 +18,7 @@ export function TeamSection({
   title = "Une équipe locale qui connaît chaque calanque",
   subtitle = "Basés à Cassis, nous vous accompagnons pour choisir le bateau et préparer votre sortie.",
   ctaLabel = "Nous contacter",
-  image = "/équipe.jpg",
+  image = "/equipe.jpg",
   members = [],
   phoneDisplay,
 }: TeamSectionProps) {
@@ -80,7 +80,7 @@ export function TeamSection({
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           {phoneDisplay && (
             <div className="absolute bottom-6 left-6 text-white">
-              <p className="text-sm font-medium text-white/80">Cassis, Bouches-du-Rhône</p>
+              <p className="text-sm font-medium text-white/80">Port de Cassis</p>
               <p className="text-lg font-semibold">{phoneDisplay}</p>
             </div>
           )}

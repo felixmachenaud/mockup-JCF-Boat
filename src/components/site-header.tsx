@@ -44,7 +44,17 @@ const centerLinks = [
   },
 ];
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  brandName?: string;
+  phone?: string;
+  phoneDisplay?: string;
+};
+
+export function SiteHeader({
+  brandName = "JCF Boat",
+  phone = "0675742581",
+  phoneDisplay = "06 75 74 25 81",
+}: SiteHeaderProps) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const isCassisSection =
@@ -82,7 +92,11 @@ export function SiteHeader() {
           Bateaux
         </Link>
 
-        <MobileMenuSheet />
+        <MobileMenuSheet
+          brandName={brandName}
+          phone={phone}
+          phoneDisplay={phoneDisplay}
+        />
       </div>
 
       {/* Desktop — navigation complète */}
@@ -112,8 +126,6 @@ export function SiteHeader() {
           )}
         >
           {centerLinks.map(({ href, label, match }) => {
-            // Sur pages Cassis, "Destinations" n'est pas le curseur principal
-            // (c'est Calanques / Location dans le menu Cassis).
             const active =
               label === "Destinations" ? false : match(pathname);
             return (

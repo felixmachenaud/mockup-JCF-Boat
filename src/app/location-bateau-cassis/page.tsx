@@ -23,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${page.seoTitle || page.title} | ${c.brand.name}`,
       description: page.seoDescription || page.subtitle,
       url: `${SITE_URL}/location-bateau-cassis`,
+      images: page.image ? [{ url: page.image }] : [{ url: "/mana23.1.jpg" }],
       locale: "fr_FR",
       type: "website",
     },
@@ -46,7 +47,7 @@ export default async function PillarPage() {
           provider: {
             "@type": "LocalBusiness",
             name: content.brand.name,
-            telephone: content.contact.phoneDisplay,
+            telephone: content.contact.phone,
             address: {
               "@type": "PostalAddress",
               addressLocality: "Cassis",
@@ -60,7 +61,11 @@ export default async function PillarPage() {
         }}
       />
       <PageBackground />
-      <SiteHeader />
+      <SiteHeader
+        brandName={content.brand.name}
+        phone={content.contact.phone}
+        phoneDisplay={content.contact.phoneDisplay}
+      />
 
       <article className="relative z-[2] px-4 pb-20 pt-[calc(5.5rem+env(safe-area-inset-top))] md:px-8 md:pb-28 md:pt-32">
         <div className="mx-auto max-w-5xl">

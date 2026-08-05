@@ -193,12 +193,12 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
             />
             <TwoCol>
               <Field
-                label="Libellé CTA principal"
+                label="CTA principal (lien #contact)"
                 value={content.hero.ctaLabel}
                 onChange={(v) => patch("hero", { ctaLabel: v })}
               />
               <Field
-                label="Libellé CTA secondaire"
+                label="CTA secondaire (lien /bateaux)"
                 value={content.hero.secondaryCtaLabel}
                 onChange={(v) => patch("hero", { secondaryCtaLabel: v })}
               />
@@ -377,7 +377,7 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
         <div className="space-y-8">
           <DestinationPageEditor
             title="Page Calanques"
-            hint="Page /visite-calanques-en-bateau — contenu éditorial et SEO"
+            hint="Page /calanques-de-cassis — contenu éditorial et SEO"
             page={content.pages.calanques}
             onChange={(next) => patchPage("calanques", next)}
             boatIdHint={boatIdHint}
@@ -549,7 +549,7 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
               onChange={(v) => patch("contact", { hours: v })}
             />
             <Field
-              label="Libellé bouton appeler"
+              label="Libellé bouton appeler (lien téléphone)"
               value={content.contact.ctaCallLabel}
               onChange={(v) => patch("contact", { ctaCallLabel: v })}
             />

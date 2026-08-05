@@ -31,7 +31,7 @@ const bookingSchema = baseSchema.extend({
     .string()
     .trim()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
-  period: z.enum(["matinee", "apres-midi"]),
+  period: z.string().trim().min(2).max(120),
   passengers: z.coerce.number().int().min(1).max(20),
   notes: z.string().trim().max(2000).default(""),
 });
@@ -96,14 +96,13 @@ export async function POST(req: Request) {
         replyTo: data.email,
       });
     } else {
-      const periodLabel = data.period === "matinee" ? "Matinée" : "Après-midi";
       const rows: Array<[string, string]> = [
         ["Nom", data.name],
         ["Email", data.email],
         ["Téléphone", data.phone || "—"],
         ["Bateau", data.boatName],
         ["Date", data.date],
-        ["Créneau", periodLabel],
+        ["Créneau", data.period],
         ["Passagers", String(data.passengers)],
         ["Notes / informations", data.notes || "—"],
       ];

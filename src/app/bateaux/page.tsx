@@ -19,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${c.seo.boatsTitle} | ${c.brand.name}`,
       description: c.seo.boatsDescription,
       url: `${SITE_URL}/bateaux`,
+      images: [{ url: "/mana23.1.jpg" }],
       locale: "fr_FR",
       type: "website",
     },
@@ -46,7 +47,11 @@ export default async function BateauxPage() {
       />
       <PageBackground />
       <RestOfPageBlur />
-      <SiteHeader />
+      <SiteHeader
+        brandName={content.brand.name}
+        phone={content.contact.phone}
+        phoneDisplay={content.contact.phoneDisplay}
+      />
 
       <div className="relative z-[2]">
         <section

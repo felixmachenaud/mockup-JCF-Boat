@@ -15,8 +15,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description: c.seo.homeDescription,
       url: SITE_URL,
       siteName: c.brand.name,
+      images: [{ url: "/mana23.1.jpg" }],
       locale: "fr_FR",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: ["/mana23.1.jpg"],
     },
   };
 }
@@ -33,11 +38,11 @@ export default async function Page() {
           name: content.brand.name,
           description: content.seo.homeDescription,
           url: SITE_URL,
-          telephone: content.contact.phoneDisplay,
+          telephone: content.contact.phone,
           email: content.contact.email,
           address: {
             "@type": "PostalAddress",
-            streetAddress: "Port de Cassis",
+            streetAddress: content.contact.address,
             addressLocality: "Cassis",
             postalCode: "13260",
             addressCountry: "FR",

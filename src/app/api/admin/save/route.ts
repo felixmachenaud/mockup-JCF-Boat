@@ -47,8 +47,9 @@ export async function POST(req: Request) {
   revalidatePath("/location-bateau-cassis");
   revalidatePath("/calanques-de-cassis");
   revalidatePath("/sitemap.xml");
+  // Tous les slugs (y compris dépubliés / renommés) pour invalider le cache
   for (const boat of parsed.data.boats) {
-    if (boat.published) revalidatePath(`/bateaux/${boat.slug}`);
+    if (boat.slug) revalidatePath(`/bateaux/${boat.slug}`);
   }
 
   return NextResponse.json({ ok: true });

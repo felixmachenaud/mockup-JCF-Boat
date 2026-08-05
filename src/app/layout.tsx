@@ -38,9 +38,11 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     siteName: SITE_NAME,
     url: SITE_URL,
+    images: [{ url: "/mana23.1.jpg", width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
+    images: ["/mana23.1.jpg"],
   },
   robots: {
     index: true,
@@ -63,7 +65,7 @@ export default async function RootLayout({
   const content = await getContent();
 
   return (
-    <html lang="fr">
+    <html lang="fr" data-scroll-behavior="smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
       >

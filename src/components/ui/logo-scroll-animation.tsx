@@ -16,13 +16,15 @@ interface LogoScrollProps {
   subtitle?: string;
   ctaLabel?: string;
   secondaryCtaLabel?: string;
+  brandName?: string;
 }
 
 export function LogoScrollAnimation({
   title = "Explorez la côte avec",
   subtitle,
   ctaLabel = "Nous contacter",
-  secondaryCtaLabel = "Réserver",
+  secondaryCtaLabel = "Voir les bateaux",
+  brandName = "JCF Boat",
 }: LogoScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -109,13 +111,14 @@ export function LogoScrollAnimation({
               rotateX={rotateX}
               scale={scale}
               translateY={translateY}
+              brandName={brandName}
             />
           </div>
 
           <div className="relative z-10 mt-2 flex flex-wrap justify-center gap-3 -translate-y-[2cm] md:mt-4">
-            <AvailabilityButton size="hero" href="/bateaux" label={ctaLabel} />
+            <AvailabilityButton size="hero" href="/#contact" label={ctaLabel} />
             <Link
-              href="/location-bateau-cassis"
+              href="/bateaux"
               className="hero-availability-btn inline-flex min-h-[3.75rem] items-center justify-center rounded-full border border-white/40 bg-black/30 px-10 text-lg font-medium text-white backdrop-blur-sm transition hover:bg-black/45 md:min-h-[4.5rem] md:px-12 md:text-xl"
             >
               {secondaryCtaLabel}
@@ -137,7 +140,8 @@ function AnimatedLogo({
   rotateX,
   scale,
   translateY,
-}: AnimatedLogoProps) {
+  brandName,
+}: AnimatedLogoProps & { brandName: string }) {
   return (
     <motion.div
       style={{
@@ -154,7 +158,7 @@ function AnimatedLogo({
         {/* Native img preserves PNG alpha — next/image can flatten transparency */}
         <img
           src="/logo_white.png"
-          alt="JCF Boat Services"
+          alt={brandName}
           draggable={false}
           decoding="async"
           fetchPriority="high"

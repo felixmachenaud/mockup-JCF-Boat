@@ -97,7 +97,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/reservation",
-        destination: "/",
+        destination: "/#contact",
         permanent: true,
       },
     ];

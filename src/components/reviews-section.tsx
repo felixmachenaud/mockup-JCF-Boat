@@ -20,6 +20,7 @@ function ReviewCard({
   text,
   date,
   categoryLabel,
+  source,
 }: {
   name: string;
   location: string;
@@ -27,6 +28,7 @@ function ReviewCard({
   text: string;
   date: string;
   categoryLabel: string;
+  source?: string;
 }) {
   return (
     <article className="flex h-full flex-col rounded-2xl border border-white/12 bg-black/25 p-5 md:p-6">
@@ -49,6 +51,7 @@ function ReviewCard({
         <p className="text-sm font-medium text-white">{name}</p>
         <p className="text-xs text-white/55">
           {location} · {date}
+          {source ? ` · ${source}` : ""}
         </p>
       </footer>
     </article>
@@ -178,6 +181,7 @@ export function ReviewsSection({
                   text={review.text}
                   date={review.date}
                   categoryLabel={reviewCategoryLabels[review.category]}
+                  source={review.source}
                 />
               ))}
             </motion.div>
@@ -228,6 +232,7 @@ export function ReviewsSection({
                     text={featured.text}
                     date={featured.date}
                     categoryLabel={reviewCategoryLabels[featured.category]}
+                    source={featured.source}
                   />
                 </div>
               );
