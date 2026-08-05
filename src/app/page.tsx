@@ -1,39 +1,54 @@
-"use client";
+import type { Metadata } from "next";
+import { getContent } from "@/lib/content-store";
+import { SITE_URL } from "@/lib/site-config";
+import { HomePage } from "@/components/home-page";
+import { JsonLd } from "@/components/json-ld";
 
-import { useState } from "react";
-import { PageBackground } from "@/components/page-background";
-import { SiteHeader } from "@/components/site-header";
-import { HeroScroll } from "@/components/hero-scroll";
-import { RestOfPageBlur } from "@/components/rest-of-page-blur";
-import { FleetSection } from "@/components/fleet-section";
-import { TeamSection } from "@/components/team-section";
-import { ReviewsSection } from "@/components/reviews-section";
-import { ContactSection } from "@/components/contact-section";
-import { MobileNav } from "@/components/mobile-nav";
-import { HashScrollHandler } from "@/components/hash-scroll-handler";
-import { AvailabilityModal } from "@/components/availability-modal";
+export async function generateMetadata(): Promise<Metadata> {
+  const c = await getContent();
+  return {
+    title: c.seo.homeTitle,
+    description: c.seo.homeDescription,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: `${c.seo.homeTitle} | ${c.brand.name}`,
+      description: c.seo.homeDescription,
+      url: SITE_URL,
+      siteName: c.brand.name,
+      locale: "fr_FR",
+      type: "website",
+    },
+  };
+}
 
-export default function Home() {
-  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+export default async function Page() {
+  const content = await getContent();
 
   return (
-    <main className="relative min-h-screen pb-mobile-nav md:pb-0">
-      <HashScrollHandler />
-      <PageBackground />
-      <RestOfPageBlur />
-      <SiteHeader />
-      <div className="relative z-[2]">
-        <HeroScroll onOpenAvailability={() => setAvailabilityOpen(true)} />
-        <FleetSection onOpenAvailability={() => setAvailabilityOpen(true)} />
-        <TeamSection />
-        <ReviewsSection />
-        <ContactSection />
-      </div>
-      <MobileNav />
-      <AvailabilityModal
-        open={availabilityOpen}
-        onClose={() => setAvailabilityOpen(false)}
+    <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BoatRental",
+          name: content.brand.name,
+          description: content.seo.homeDescription,
+          url: SITE_URL,
+          telephone: content.contact.phoneDisplay,
+          email: content.contact.email,
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Port de Cassis",
+            addressLocality: "Cassis",
+            postalCode: "13260",
+            addressCountry: "FR",
+          },
+          areaServed: {
+            "@type": "Place",
+            name: "Cassis et calanques",
+          },
+        }}
       />
-    </main>
+      <HomePage content={content} />
+    </>
   );
 }

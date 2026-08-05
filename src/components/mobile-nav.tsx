@@ -10,14 +10,15 @@ const navItems = [
   {
     icon: Ship,
     label: "Bateaux",
-    href: "/#fleet",
-    match: (p: string) => p === "/" || p.startsWith("/reservation"),
+    href: "/bateaux",
+    match: (p: string) => p.startsWith("/bateaux"),
   },
   {
     icon: MapPin,
-    label: "Cassis",
-    href: "/cassis",
-    match: (p: string) => p.startsWith("/cassis"),
+    label: "Calanques",
+    href: "/calanques-de-cassis",
+    match: (p: string) =>
+      p.startsWith("/calanques-de-cassis") || p.startsWith("/location-bateau-cassis"),
   },
   { icon: Star, label: "Avis", href: "/#reviews", match: () => false },
   { icon: Phone, label: "Contact", href: "/#contact", match: () => false },

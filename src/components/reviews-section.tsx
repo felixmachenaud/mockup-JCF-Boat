@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  mockReviews,
   reviewCategories,
   reviewCategoryLabels,
   type ReviewCategory,
 } from "@/lib/mock-reviews";
+import type { CmsReview } from "@/lib/site-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +55,21 @@ function ReviewCard({
   );
 }
 
-export function ReviewsSection() {
+type ReviewsSectionProps = {
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  reviews: CmsReview[];
+};
+
+export function ReviewsSection({
+  eyebrow = "Avis",
+  title = "Ce que disent nos clients",
+  subtitle,
+  ctaLabel = "Nous contacter",
+  reviews: allReviews,
+}: ReviewsSectionProps) {
   const [category, setCategory] = useState<ReviewCategory>("all");
   const [index, setIndex] = useState(0);
   const [compact, setCompact] = useState(true);
@@ -69,9 +83,9 @@ export function ReviewsSection() {
   }, []);
 
   const reviews = useMemo(() => {
-    if (category === "all") return mockReviews;
-    return mockReviews.filter((review) => review.category === category);
-  }, [category]);
+    if (category === "all") return allReviews;
+    return allReviews.filter((review) => review.category === category);
+  }, [category, allReviews]);
 
   const visibleCount =
     category === "all" || compact ? 1 : Math.min(3, reviews.length);
@@ -99,26 +113,29 @@ export function ReviewsSection() {
     setIndex(0);
   };
 
-  if (reviews.length === 0) return null;
+  if (allReviews.length === 0) return null;
 
   return (
     <section id="reviews" className="relative scroll-mt-28 px-4 py-20 md:px-8 md:py-28">
       <div className="mx-auto max-w-6xl">
         <div className="mb-10 text-center">
           <p className="mb-2 text-xs font-medium tracking-[0.25em] text-white/70 uppercase">
-            Avis
+            {eyebrow}
           </p>
           <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-            Ce que disent nos clients
+            {title}
           </h2>
+          {subtitle && (
+            <p className="mx-auto mt-3 max-w-xl text-sm text-white/70">{subtitle}</p>
+          )}
         </div>
 
         <div className="mb-8 flex flex-wrap justify-center gap-2">
           {reviewCategories.map(({ id, label }) => {
             const count =
               id === "all"
-                ? mockReviews.length
-                : mockReviews.filter((r) => r.category === id).length;
+                ? allReviews.length
+                : allReviews.filter((r) => r.category === id).length;
 
             return (
               <button
@@ -129,7 +146,7 @@ export function ReviewsSection() {
                   "min-h-11 rounded-full px-4 py-2.5 text-xs font-medium transition-colors active:scale-[0.98] md:text-sm",
                   category === id
                     ? "bg-white text-slate-900"
-                    : "border border-white/25 text-white/80 hover:border-white/40 hover:text-white"
+                    : "border border-white/25 text-white/80 hover:border-white/40 hover:text-white",
                 )}
               >
                 {label}
@@ -149,7 +166,7 @@ export function ReviewsSection() {
               transition={{ duration: 0.35, ease: "easeOut" }}
               className={cn(
                 "grid gap-4",
-                category === "all" ? "max-w-3xl mx-auto" : "md:grid-cols-2 lg:grid-cols-3"
+                category === "all" ? "mx-auto max-w-3xl" : "md:grid-cols-2 lg:grid-cols-3",
               )}
             >
               {visibleReviews.map((review) => (
@@ -195,7 +212,7 @@ export function ReviewsSection() {
         {category === "all" && (
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {reviewCategories.slice(1).map(({ id, label }) => {
-              const categoryReviews = mockReviews.filter((r) => r.category === id);
+              const categoryReviews = allReviews.filter((r) => r.category === id);
               const featured = categoryReviews[0];
               if (!featured) return null;
 
@@ -220,7 +237,7 @@ export function ReviewsSection() {
 
         <div className="mt-12 text-center">
           <Button asChild size="lg" className="bg-white text-slate-900 hover:bg-white/90">
-            <Link href="/reservation">Réserver votre sortie</Link>
+            <Link href="/#contact">{ctaLabel}</Link>
           </Button>
         </div>
       </div>

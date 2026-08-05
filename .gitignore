@@ -30,6 +30,12 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
+
+# CMS local overrides & uploads (dev)
+/data/site-content.json
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # typescript
 *.tsbuildinfo

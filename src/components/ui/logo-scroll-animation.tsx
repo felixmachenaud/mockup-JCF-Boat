@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   motion,
   MotionValue,
@@ -12,12 +13,16 @@ import { AvailabilityButton } from "@/components/availability-button";
 
 interface LogoScrollProps {
   title?: React.ReactNode;
-  onOpenAvailability?: () => void;
+  subtitle?: string;
+  ctaLabel?: string;
+  secondaryCtaLabel?: string;
 }
 
 export function LogoScrollAnimation({
   title = "Explorez la côte avec",
-  onOpenAvailability,
+  subtitle,
+  ctaLabel = "Nous contacter",
+  secondaryCtaLabel = "Réserver",
 }: LogoScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -90,6 +95,11 @@ export function LogoScrollAnimation({
           className="relative z-10 text-center"
         >
           <ElectricTitle>{title}</ElectricTitle>
+          {subtitle ? (
+            <p className="mx-auto mt-3 max-w-xl text-sm text-white/75 md:text-base">
+              {subtitle}
+            </p>
+          ) : null}
         </motion.div>
 
         <div className="-mt-2 w-full md:-mt-5 md:-translate-y-[2cm]">
@@ -102,8 +112,14 @@ export function LogoScrollAnimation({
             />
           </div>
 
-          <div className="relative z-10 mt-2 flex justify-center -translate-y-[2cm] md:mt-4">
-            <AvailabilityButton size="hero" onClick={onOpenAvailability} />
+          <div className="relative z-10 mt-2 flex flex-wrap justify-center gap-3 -translate-y-[2cm] md:mt-4">
+            <AvailabilityButton size="hero" href="/bateaux" label={ctaLabel} />
+            <Link
+              href="/location-bateau-cassis"
+              className="hero-availability-btn inline-flex min-h-[3.75rem] items-center justify-center rounded-full border border-white/40 bg-black/30 px-10 text-lg font-medium text-white backdrop-blur-sm transition hover:bg-black/45 md:min-h-[4.5rem] md:px-12 md:text-xl"
+            >
+              {secondaryCtaLabel}
+            </Link>
           </div>
         </div>
       </div>

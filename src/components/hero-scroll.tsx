@@ -4,17 +4,30 @@ import { LogoScrollAnimation } from "@/components/ui/logo-scroll-animation";
 import { ChevronDown } from "lucide-react";
 
 type HeroScrollProps = {
-  onOpenAvailability?: () => void;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  secondaryCtaLabel?: string;
 };
 
-export function HeroScroll({ onOpenAvailability }: HeroScrollProps) {
+export function HeroScroll({
+  title,
+  subtitle,
+  ctaLabel,
+  secondaryCtaLabel,
+}: HeroScrollProps) {
   return (
     <section id="hero" className="relative scroll-mt-0">
-      <LogoScrollAnimation onOpenAvailability={onOpenAvailability} />
+      <LogoScrollAnimation
+        title={title}
+        subtitle={subtitle}
+        ctaLabel={ctaLabel}
+        secondaryCtaLabel={secondaryCtaLabel}
+      />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex justify-center md:bottom-8">
         <a
-          href="#fleet"
+          href="#bateaux"
           className="pointer-events-auto flex min-h-11 flex-col items-center justify-center gap-1 rounded-full px-4 py-2 text-sm text-white/60 transition-colors active:bg-white/10 active:text-white"
         >
           <span>Découvrir</span>

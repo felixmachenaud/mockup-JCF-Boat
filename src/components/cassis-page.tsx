@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { calanques } from "@/lib/calanques";
+import type { CmsCalanque } from "@/lib/site-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ function ExpandingGallery({
   calanque,
   index,
 }: {
-  calanque: (typeof calanques)[0];
+  calanque: CmsCalanque;
   index: number;
 }) {
   const [active, setActive] = useState(0);
@@ -42,14 +42,20 @@ function ExpandingGallery({
         {/* Mobile — image principale + miniatures tactiles */}
         <div className="md:hidden">
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/15">
-            <Image
-              src={calanque.images[active]}
-              alt={`${calanque.name} — vue ${active + 1}`}
-              fill
-              className="object-cover"
-              sizes="100vw"
-              priority={index === 0}
-            />
+            {calanque.images[active] ? (
+              <Image
+                src={calanque.images[active]}
+                alt={`${calanque.name} — vue ${active + 1}`}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority={index === 0}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-black/40 text-sm text-white/50">
+                Pas de photo
+              </div>
+            )}
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {calanque.images.map((src, i) => (
@@ -106,7 +112,7 @@ function ExpandingGallery({
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Button asChild className="h-12 w-full bg-sky-500 hover:bg-sky-400 sm:w-auto">
-            <Link href="/#fleet">Y aller</Link>
+            <Link href="/#bateaux">Y aller</Link>
           </Button>
           <Button
             type="button"
@@ -130,7 +136,7 @@ function ExpandingGallery({
   );
 }
 
-export function CalanquesShowcase() {
+export function CalanquesShowcase({ calanques }: { calanques: CmsCalanque[] }) {
   return (
     <div>
       {calanques.map((calanque, index) => (
@@ -207,7 +213,7 @@ export function CassisWeather() {
 
       <div className="mt-10 text-center">
         <Button asChild size="lg">
-          <Link href="/#fleet">Réserver selon la météo</Link>
+          <Link href="/bateaux">Voir les bateaux</Link>
         </Button>
       </div>
     </div>

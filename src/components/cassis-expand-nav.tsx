@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const headerPillClass =
@@ -10,28 +11,39 @@ const headerPillClass =
 const linkClass =
   "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium tracking-wide text-white/90 transition-colors hover:bg-white/10 hover:text-white md:px-4 md:text-sm";
 
+const activeLinkClass = "bg-white/15 text-white ring-1 ring-white/25 hover:bg-white/25";
+
 const navShellClass = cn(
   headerPillClass,
-  "inline-flex min-w-[6.75rem] items-center justify-center px-2 py-1.5 md:px-3 md:py-2"
+  "inline-flex min-w-[6.75rem] items-center justify-center px-2 py-1.5 md:px-3 md:py-2",
 );
 
 const cassisLinks = [
-  { href: "/cassis#calanques", label: "Calanques" },
-  { href: "/cassis#carte-calanques", label: "Carte" },
-  { href: "/cassis#meteo", label: "Météo" },
+  { href: "/calanques-de-cassis", label: "Calanques" },
+  { href: "/location-bateau-cassis", label: "Location" },
 ];
 
 export function CassisExpandNav() {
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isCassisSection =
+    pathname.startsWith("/calanques-de-cassis") ||
+    pathname.startsWith("/location-bateau-cassis");
+  const [open, setOpen] = useState(isCassisSection);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isCassisSection) setOpen(true);
+  }, [isCassisSection]);
+
+  useEffect(() => {
     const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        if (!isCassisSection) setOpen(false);
+      }
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-  }, []);
+  }, [isCassisSection]);
 
   useEffect(() => {
     const mq = window.matchMedia("(hover: hover)");
@@ -41,14 +53,16 @@ export function CassisExpandNav() {
     if (!node) return;
 
     const openMenu = () => setOpen(true);
-    const closeMenu = () => setOpen(false);
+    const closeMenu = () => {
+      if (!isCassisSection) setOpen(false);
+    };
     node.addEventListener("mouseenter", openMenu);
     node.addEventListener("mouseleave", closeMenu);
     return () => {
       node.removeEventListener("mouseenter", openMenu);
       node.removeEventListener("mouseleave", closeMenu);
     };
-  }, []);
+  }, [isCassisSection]);
 
   return (
     <div
@@ -56,7 +70,6 @@ export function CassisExpandNav() {
       className="relative shrink-0"
       style={{ marginLeft: "0.4cm" }}
     >
-      {/* Placeholder invisible : même gabarit qu'Accueil pour l'alignement vertical */}
       <nav aria-hidden className={cn(navShellClass, "pointer-events-none invisible")}>
         <span className={linkClass}>Cassis</span>
       </nav>
@@ -66,35 +79,37 @@ export function CassisExpandNav() {
         className={cn(
           navShellClass,
           "absolute left-0 top-0 z-40 justify-start whitespace-nowrap transition-shadow duration-300",
-          open && "shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+          open && "shadow-[0_12px_40px_rgba(0,0,0,0.45)]",
         )}
       >
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className={cn(linkClass, "shrink-0")}
-          aria-expanded={open}
-          aria-haspopup="true"
+        <Link
+          href="/calanques-de-cassis"
+          className={cn(linkClass, "shrink-0", isCassisSection && activeLinkClass)}
+          aria-current={isCassisSection ? "page" : undefined}
         >
           Cassis
-        </button>
+        </Link>
 
         <div
           className={cn(
             "flex items-center overflow-hidden transition-all duration-300 ease-out",
-            open ? "max-w-[240px] opacity-100" : "max-w-0 opacity-0"
+            open ? "max-w-[280px] opacity-100" : "max-w-0 opacity-0",
           )}
         >
-          {cassisLinks.map(({ href, label }) => (
-            <Link
-              key={label}
-              href={href}
-              onClick={() => setOpen(false)}
-              className={cn(linkClass, "shrink-0")}
-            >
-              {label}
-            </Link>
-          ))}
+          {cassisLinks.map(({ href, label }) => {
+            const active = pathname.startsWith(href);
+            return (
+              <Link
+                key={label}
+                href={href}
+                onClick={() => setOpen(true)}
+                className={cn(linkClass, "shrink-0", active && activeLinkClass)}
+                aria-current={active ? "page" : undefined}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </div>
