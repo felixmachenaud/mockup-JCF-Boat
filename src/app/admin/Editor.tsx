@@ -18,6 +18,16 @@ import {
   type DestinationPageContent,
   type SiteContent,
 } from "@/lib/site-content";
+import {
+  applyBoatClassification,
+  boatClassificationSummary,
+  BOAT_HULL_TYPE_OPTIONS,
+  BOAT_LICENSE_OPTIONS,
+  BOAT_PROPULSION_OPTIONS,
+  getLicenseKind,
+  isElectric,
+  type BoatLicenseKind,
+} from "@/lib/boat-taxonomy";
 
 const TABS = [
   { key: "accueil", label: "Accueil" },
@@ -49,6 +59,8 @@ const BOAT_CATEGORIES: { value: BoatCategory; label: string }[] = [
   { value: "sans-permis", label: "Sans permis" },
   { value: "electrique", label: "Électrique" },
 ];
+
+const HULL_TYPE_VALUES = new Set(BOAT_HULL_TYPE_OPTIONS.map((o) => o.value));
 
 function emptyHighlight(): CmsHighlight {
   return { id: `h-${Date.now()}`, title: "", text: "" };
@@ -316,7 +328,9 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
                 >
                   <span className="line-clamp-1">{boat.name}</span>
                   <span className="mt-0.5 block text-[10px] opacity-60">
-                    {boat.published ? boat.category : `${boat.category} · masqué`}
+                    {boat.published
+                      ? boatClassificationSummary(boat)
+                      : `${boatClassificationSummary(boat)} · masqué`}
                   </span>
                 </button>
               ))}
@@ -850,32 +864,100 @@ function BoatEditor({
           value={String(boat.year)}
           onChange={(v) => onChange({ ...boat, year: Number(v) || boat.year })}
         />
-        <Field
-          label="Type"
-          value={boat.type}
-          onChange={(v) => onChange({ ...boat, type: v })}
-        />
+        <label className={labelCls}>
+          Type de coque
+          <select
+            value={
+              HULL_TYPE_VALUES.has(boat.type)
+                ? boat.type
+                : boat.type
+                  ? `__custom__:${boat.type}`
+                  : "Coque rigide"
+            }
+            onChange={(e) => {
+              const raw = e.target.value;
+              const hullType = raw.startsWith("__custom__:")
+                ? raw.slice("__custom__:".length)
+                : raw;
+              onChange(applyBoatClassification(boat, { hullType }));
+            }}
+            className={selectCls}
+          >
+            {BOAT_HULL_TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+            {!HULL_TYPE_VALUES.has(boat.type) && boat.type ? (
+              <option value={`__custom__:${boat.type}`}>
+                Autre · {boat.type}
+              </option>
+            ) : null}
+          </select>
+        </label>
       </TwoCol>
 
-      <label className={labelCls}>
-        Catégorie
-        <select
-          value={boat.category}
-          onChange={(e) =>
-            onChange({
-              ...boat,
-              category: e.target.value as CmsBoat["category"],
-            })
-          }
-          className={selectCls}
-        >
-          {BOAT_CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
+        <p className="text-xs font-medium tracking-wide text-sky-700 uppercase">
+          Classification (filtres page Flotte)
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Ces champs pilotent les bandeaux Tous / Avec permis / Sans permis /
+          Électriques sur le site.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className={labelCls}>
+            Permis
+            <select
+              value={getLicenseKind(boat)}
+              onChange={(e) =>
+                onChange(
+                  applyBoatClassification(boat, {
+                    licenseKind: e.target.value as BoatLicenseKind,
+                  }),
+                )
+              }
+              className={selectCls}
+            >
+              {BOAT_LICENSE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={labelCls}>
+            Propulsion
+            <select
+              value={isElectric(boat) ? "electrique" : "thermique"}
+              onChange={(e) =>
+                onChange(
+                  applyBoatClassification(boat, {
+                    electric: e.target.value === "electrique",
+                  }),
+                )
+              }
+              className={selectCls}
+            >
+              {BOAT_PROPULSION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="mt-3 text-[11px] text-slate-500">
+          Enregistré :{" "}
+          <span className="font-medium text-slate-700">
+            {boatClassificationSummary(boat)}
+          </span>
+          {" · "}catégorie CMS{" "}
+          <span className="font-medium text-slate-700">{boat.category}</span>
+          {" · "}permis affiché{" "}
+          <span className="font-medium text-slate-700">{boat.license}</span>
+        </p>
+      </div>
 
       <Field
         label="Capacité (personnes)"
@@ -929,12 +1011,6 @@ function BoatEditor({
           onChange={(v) => onChange({ ...boat, motor: v })}
         />
       </TwoCol>
-
-      <Field
-        label="Permis"
-        value={boat.license}
-        onChange={(v) => onChange({ ...boat, license: v })}
-      />
 
       <Field
         label="Tags (séparés par des virgules)"

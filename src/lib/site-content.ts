@@ -651,7 +651,7 @@ export function emptyBoat(): CmsBoat {
     slug: "nouveau-bateau",
     name: "Nouveau bateau",
     year: new Date().getFullYear(),
-    type: "Day cruiser",
+    type: "Coque rigide",
     category: "standard",
     capacity: 6,
     pricePerDay: 400,

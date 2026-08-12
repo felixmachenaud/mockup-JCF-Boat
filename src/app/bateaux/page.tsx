@@ -7,7 +7,7 @@ import { RestOfPageBlur } from "@/components/rest-of-page-blur";
 import { SiteHeader } from "@/components/site-header";
 import { MobileNav } from "@/components/mobile-nav";
 import { JsonLd } from "@/components/json-ld";
-import { BoatCard } from "@/components/boat-card";
+import { BoatFleetFilters } from "@/components/boat-fleet-filters";
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getContent();
@@ -74,11 +74,7 @@ export default async function BateauxPage() {
             {boats.length === 0 ? (
               <p className="text-white/60">Aucun bateau publié pour le moment.</p>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {boats.map((boat) => (
-                  <BoatCard key={boat.id} boat={boat} />
-                ))}
-              </div>
+              <BoatFleetFilters boats={boats} />
             )}
           </div>
         </section>

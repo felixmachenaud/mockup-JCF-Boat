@@ -19,14 +19,9 @@ import { JsonLd } from "@/components/json-ld";
 import { BoatCard } from "@/components/boat-card";
 import { BoatBookingForm } from "@/components/boat-booking-form";
 import { BoatPricingTable } from "@/components/boat-pricing-table";
+import { boatClassificationSummary } from "@/lib/boat-taxonomy";
 
 type Props = { params: Promise<{ slug: string }> };
-
-function categoryLabel(category: string) {
-  if (category === "sans-permis") return "Sans permis";
-  if (category === "electrique") return "Électrique";
-  return "Avec permis";
-}
 
 export async function generateStaticParams() {
   const content = await getContent();
@@ -124,36 +119,48 @@ export default async function BoatDetailPage({ params }: Props) {
             <span className="text-white">{boat.name}</span>
           </nav>
 
-          {/* Colonne photos stretchée jusqu’au bas de la grille tarifaire */}
-          <div className="grid gap-10 lg:grid-cols-12 lg:items-stretch lg:gap-12">
-            <div className="flex h-full min-h-0 flex-col gap-3 lg:col-span-5">
+          {/* Photos à gauche, fiche à droite — colonne photos élargie si 1 ou 2 images */}
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12">
+            <div
+              className={
+                photos.length <= 2
+                  ? "flex flex-col gap-4 lg:col-span-7"
+                  : "flex flex-col gap-4 lg:col-span-5"
+              }
+            >
               {photos.map((src, i) => (
                 <div
                   key={src}
-                  className={
-                    photos.length === 1
-                      ? "relative aspect-[4/3] min-h-0 overflow-hidden rounded-2xl border border-white/15 lg:aspect-auto lg:min-h-[20rem] lg:flex-1"
-                      : photos.length === 2
-                        ? "relative aspect-[4/3] min-h-0 overflow-hidden rounded-2xl border border-white/15 lg:aspect-auto lg:min-h-[12rem] lg:flex-1"
-                        : "relative aspect-[4/3] min-h-0 overflow-hidden rounded-2xl border border-white/15 lg:aspect-auto lg:min-h-[8rem] lg:flex-1"
-                  }
+                  className="overflow-hidden rounded-2xl border border-white/15 bg-black/25"
                 >
                   <Image
                     src={src}
                     alt={`${boat.name} — photo ${i + 1}`}
-                    fill
+                    width={1600}
+                    height={1200}
                     priority={i === 0}
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 40vw"
+                    className="h-auto w-full"
+                    style={{ width: "100%", height: "auto" }}
+                    sizes={
+                      photos.length <= 2
+                        ? "(max-width: 1024px) 100vw, 58vw"
+                        : "(max-width: 1024px) 100vw, 40vw"
+                    }
                   />
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-col lg:col-span-7">
+            <div
+              className={
+                photos.length <= 2
+                  ? "flex flex-col lg:col-span-5"
+                  : "flex flex-col lg:col-span-7"
+              }
+            >
               <div className="rounded-2xl border border-white/15 bg-black/30 p-5 md:p-7">
                 <p className="text-sm font-medium tracking-[0.22em] text-sky-300 uppercase md:text-base">
-                  {categoryLabel(boat.category)}
+                  {boatClassificationSummary(boat)}
                   {boat.rating > 0 ? ` · ${boat.rating}/5` : ""}
                 </p>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-5xl">
