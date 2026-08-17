@@ -6,7 +6,11 @@ import {
   getClientIp,
 } from "@/lib/admin-request";
 import { pruneRateLimits, rateLimit } from "@/lib/rate-limit";
-import { detectImageMime, uploadPublicImage } from "@/lib/upload-image";
+import {
+  normalizeUploadedImage,
+  uploadNormalizedImage,
+} from "@/lib/upload-image";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export const runtime = "nodejs";
 
@@ -28,7 +32,7 @@ export async function POST(req: Request) {
 
   pruneRateLimits();
   const ip = getClientIp(req);
-  const limited = rateLimit(`admin-upload:${ip}`, {
+  const limited = await rateLimit(`admin-upload:${ip}`, {
     limit: 30,
     windowMs: 15 * 60 * 1000,
   });
@@ -61,27 +65,28 @@ export async function POST(req: Request) {
     );
   }
 
-  // Filtre rapide sur le MIME déclaré, puis vérification magic bytes.
   if (file.type && !CLAIMED_ALLOWED.has(file.type)) {
     return NextResponse.json(
-      { error: "Format non supporté (JPEG, PNG, WebP, GIF)" },
-      { status: 400 },
-    );
-  }
-
-  const header = Buffer.from(await file.slice(0, 16).arrayBuffer());
-  const mime = detectImageMime(header);
-  if (!mime) {
-    return NextResponse.json(
-      { error: "Contenu fichier invalide (image attendue)" },
+      { error: "Format non supporté (JPEG, PNG, WebP)" },
       { status: 400 },
     );
   }
 
   try {
-    const result = await uploadPublicImage(file, mime);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const normalized = await normalizeUploadedImage(buffer);
+    const result = await uploadNormalizedImage(normalized);
+    logSecurityEvent("admin.upload", {
+      mime: normalized.mime,
+      width: normalized.width,
+      height: normalized.height,
+      bytes: normalized.buffer.length,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
+    if (err instanceof Error && /image|GIF|volumineux|dimensions|illisible|frames/i.test(err.message)) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     return genericServerError("[admin/upload]", err);
   }
 }

@@ -1,16 +1,22 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const fieldClass =
   "w-full rounded-2xl border border-white/15 bg-black/25 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-sky-300/60 focus:ring-2 focus:ring-sky-400/30";
 
 const labelClass = "mb-1.5 block text-xs font-medium tracking-wide text-white/65";
 
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || "";
+
 export function ContactMessageForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const onToken = useCallback((token: string | null) => setTurnstileToken(token), []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -31,6 +37,7 @@ export function ContactMessageForm() {
           phone: String(fd.get("phone") || ""),
           message: String(fd.get("message") || ""),
           website: String(fd.get("website") || ""),
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
@@ -42,6 +49,7 @@ export function ContactMessageForm() {
       }
 
       form.reset();
+      setTurnstileToken(null);
       setStatus("success");
     } catch {
       setStatus("error");
@@ -119,7 +127,6 @@ export function ContactMessageForm() {
         />
       </div>
 
-      {/* Honeypot anti-spam — hors écran (évite autofill password managers) */}
       <input
         type="text"
         name="website"
@@ -128,6 +135,22 @@ export function ContactMessageForm() {
         className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
         aria-hidden="true"
       />
+
+      {turnstileSiteKey ? (
+        <TurnstileWidget siteKey={turnstileSiteKey} onToken={onToken} />
+      ) : null}
+
+      <p className="text-xs leading-relaxed text-white/50">
+        Vos données servent uniquement à traiter votre demande (conservation ≤ 24 mois).
+        Voir la{" "}
+        <Link
+          href="/politique-de-confidentialite"
+          className="underline decoration-white/30 underline-offset-2 hover:text-white/80"
+        >
+          politique de confidentialité
+        </Link>
+        .
+      </p>
 
       {status === "success" && (
         <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
@@ -143,7 +166,7 @@ export function ContactMessageForm() {
       <Button
         type="submit"
         size="lg"
-        disabled={status === "loading"}
+        disabled={status === "loading" || (Boolean(turnstileSiteKey) && !turnstileToken)}
         className="w-full sm:w-auto"
       >
         {status === "loading" ? "Envoi…" : "Envoyer le message"}

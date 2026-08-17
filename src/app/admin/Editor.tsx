@@ -43,7 +43,8 @@ type TabKey = (typeof TABS)[number]["key"];
 
 type EditorProps = {
   initialContent: SiteContent;
-  storeMode: "blob" | "local";
+  storeMode: "blob" | "local" | "unconfigured";
+  contentVersion: number;
 };
 
 const inputCls =
@@ -66,9 +67,14 @@ function emptyHighlight(): CmsHighlight {
   return { id: `h-${Date.now()}`, title: "", text: "" };
 }
 
-export default function Editor({ initialContent, storeMode }: EditorProps) {
+export default function Editor({
+  initialContent,
+  storeMode,
+  contentVersion,
+}: EditorProps) {
   const router = useRouter();
   const [content, setContent] = useState<SiteContent>(initialContent);
+  const [version, setVersion] = useState(contentVersion);
   const [tab, setTab] = useState<TabKey>("accueil");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
@@ -127,13 +133,21 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
       const res = await fetch("/api/admin/save", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(content),
+        body: JSON.stringify({ expectedVersion: version, content }),
       });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        meta?: { version: number };
+        currentVersion?: number;
+      };
       if (!res.ok) {
+        if (res.status === 409 && typeof j.currentVersion === "number") {
+          setVersion(j.currentVersion);
+        }
         setMessage({ type: "err", text: j.error || "Échec de la sauvegarde" });
         return;
       }
+      if (j.meta?.version != null) setVersion(j.meta.version);
       setMessage({ type: "ok", text: "Contenu enregistré et site mis à jour." });
       router.refresh();
     } catch (err) {
@@ -171,6 +185,14 @@ export default function Editor({ initialContent, storeMode }: EditorProps) {
           connectez un Blob store pour la production.
         </Banner>
       )}
+      {storeMode === "unconfigured" && (
+        <Banner type="err">
+          Blob non configuré — les sauvegardes CMS sont refusées en production.
+        </Banner>
+      )}
+      <p className="mb-3 text-xs text-slate-500">
+        Version contenu : <span className="font-mono">{version}</span>
+      </p>
 
       <nav className="mb-6 flex flex-wrap gap-1 border-b border-sky-200 pb-3">
         {TABS.map((t) => (

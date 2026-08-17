@@ -34,8 +34,14 @@ yarn-error.log*
 
 # CMS local overrides & uploads (dev)
 /data/site-content.json
+/data/admin-sessions.json
+/data/revisions/
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Documents commerciaux / personnels (ne pas exposer)
+/private/
+/devis/
 
 # typescript
 *.tsbuildinfo

@@ -10,6 +10,7 @@ import { SiteHeader } from "@/components/site-header";
 import { MobileNav } from "@/components/mobile-nav";
 import { JsonLd } from "@/components/json-ld";
 import { BoatCard } from "@/components/boat-card";
+import { buildBreadcrumbList, BUSINESS_ID } from "@/lib/schema";
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getContent();
@@ -40,21 +41,17 @@ export default async function PillarPage() {
   return (
     <main className="relative min-h-screen pb-mobile-nav md:pb-0">
       <JsonLd
+        data={buildBreadcrumbList([
+          { name: "Accueil", path: "/" },
+          { name: "Location bateau Cassis", path: "/location-bateau-cassis" },
+        ])}
+      />
+      <JsonLd
         data={{
           "@context": "https://schema.org",
           "@type": "Service",
           name: page.title,
-          provider: {
-            "@type": "LocalBusiness",
-            name: content.brand.name,
-            telephone: content.contact.phone,
-            address: {
-              "@type": "PostalAddress",
-              addressLocality: "Cassis",
-              postalCode: "13260",
-              addressCountry: "FR",
-            },
-          },
+          provider: { "@id": BUSINESS_ID },
           areaServed: "Cassis",
           description: page.seoDescription,
           url: `${SITE_URL}/location-bateau-cassis`,

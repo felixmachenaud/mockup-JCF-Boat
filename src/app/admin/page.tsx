@@ -1,10 +1,11 @@
 import Link from "next/link";
 import {
+  assertAuthSecretsReady,
   checkAdminAuth,
   isAdminConfigured,
   isUsingDemoAuth,
 } from "@/lib/admin-auth";
-import { getContent, getContentStoreMode } from "@/lib/content-store";
+import { getContentDocument, getContentStoreMode } from "@/lib/content-store";
 import LoginForm from "./LoginForm";
 import Editor from "./Editor";
 import LogoutButton from "./LogoutButton";
@@ -12,6 +13,20 @@ import LogoutButton from "./LogoutButton";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  const secrets = assertAuthSecretsReady();
+  if (!secrets.ok) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-sky-50/60 px-4">
+        <div className="max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+          <h1 className="text-lg font-semibold text-slate-900">
+            Administration non configurée
+          </h1>
+          <p className="mt-3 text-sm text-slate-600">{secrets.error}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAdminConfigured() && process.env.NODE_ENV === "production") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-sky-50/60 px-4">
@@ -20,9 +35,12 @@ export default async function AdminPage() {
             Administration non configurée
           </h1>
           <p className="mt-3 text-sm text-slate-600">
-            Définissez <code className="font-mono text-amber-800">ADMIN_PASSWORD</code>{" "}
-            (et idéalement <code className="font-mono text-amber-800">AUTH_SECRET</code>)
-            dans les variables d&apos;environnement Vercel, puis redéployez.
+            Définissez{" "}
+            <code className="font-mono text-amber-800">ADMIN_PASSWORD_HASH</code>{" "}
+            (généré via <code className="font-mono">npm run hash-admin-password</code>)
+            et <code className="font-mono text-amber-800">AUTH_SECRET</code> (≥ 32
+            caractères) dans les variables d&apos;environnement Vercel, puis
+            redéployez.
           </p>
         </div>
       </div>
@@ -34,7 +52,7 @@ export default async function AdminPage() {
     return <LoginForm demoHint={isUsingDemoAuth()} />;
   }
 
-  const content = await getContent();
+  const doc = await getContentDocument();
   const storeMode = getContentStoreMode();
 
   return (
@@ -58,7 +76,11 @@ export default async function AdminPage() {
           </div>
         </div>
       </header>
-      <Editor initialContent={content} storeMode={storeMode} />
+      <Editor
+        initialContent={doc.content}
+        storeMode={storeMode}
+        contentVersion={doc.meta.version}
+      />
     </>
   );
 }

@@ -1,5 +1,16 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === "production";
+
+const scriptSrc = [
+  "script-src 'self'",
+  "'unsafe-inline'", // Next.js inline bootstraps; migrate to nonces when supported end-to-end
+  ...(isProd ? [] : ["'unsafe-eval'"]), // Next/Turbopack HMR needs eval in development only
+  "https://maps.googleapis.com",
+  "https://maps.gstatic.com",
+  "https://challenges.cloudflare.com",
+].join(" ");
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -12,19 +23,29 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https:",
+      // SEC-04: restrict images to known origins (no blanket https:)
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.public.blob.vercel-storage.com https://*.blob.vercel-storage.com https://maps.gstatic.com https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://*.blob.vercel-storage.com",
-      "frame-src 'self' https://www.google.com https://maps.google.com https://www.google.com/maps/",
+      "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com https://*.blob.vercel-storage.com https://challenges.cloudflare.com",
+      "frame-src 'self' https://www.google.com https://maps.google.com https://www.google.com/maps/ https://challenges.cloudflare.com",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
+      ...(isProd ? ["upgrade-insecure-requests"] : []),
     ].join("; "),
   },
+  ...(isProd
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]
+    : []),
 ];
 
 const nextConfig: NextConfig = {

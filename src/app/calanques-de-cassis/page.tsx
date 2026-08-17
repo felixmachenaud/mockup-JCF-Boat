@@ -12,6 +12,7 @@ import { JsonLd } from "@/components/json-ld";
 import { CalanquesShowcase } from "@/components/cassis-page";
 import { CalanquesMap } from "@/components/calanques-map";
 import { BoatCard } from "@/components/boat-card";
+import { buildBreadcrumbList } from "@/lib/schema";
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getContent();
@@ -47,6 +48,12 @@ export default async function CalanquesPage() {
 
   return (
     <main className="relative min-h-screen pb-mobile-nav md:pb-0">
+      <JsonLd
+        data={buildBreadcrumbList([
+          { name: "Accueil", path: "/" },
+          { name: "Calanques de Cassis", path: "/calanques-de-cassis" },
+        ])}
+      />
       <JsonLd
         data={{
           "@context": "https://schema.org",

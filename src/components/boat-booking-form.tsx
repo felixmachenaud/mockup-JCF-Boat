@@ -1,13 +1,17 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 
 const fieldClass =
   "w-full rounded-2xl border border-white/25 bg-white/10 px-4 py-3.5 text-base text-white placeholder:text-white/50 outline-none transition focus:border-sky-200/70 focus:ring-2 focus:ring-sky-300/40";
 
 const labelClass = "mb-1.5 block text-sm font-medium tracking-wide text-white md:text-base";
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || "";
 
 function localTodayISO(): string {
   // Europe/Paris local calendar date (évite le décalage UTC avant ~02h)
@@ -44,6 +48,8 @@ export function BoatBookingForm({
 }: BoatBookingFormProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const onToken = useCallback((token: string | null) => setTurnstileToken(token), []);
 
   const periods = useMemo(() => {
     const fromBoat = (periodOptions ?? [])
@@ -76,6 +82,7 @@ export function BoatBookingForm({
           passengers: Number(fd.get("passengers") || 0),
           notes: String(fd.get("notes") || ""),
           website: String(fd.get("website") || ""),
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
@@ -87,6 +94,7 @@ export function BoatBookingForm({
       }
 
       form.reset();
+      setTurnstileToken(null);
       setStatus("success");
     } catch {
       setStatus("error");
@@ -269,6 +277,21 @@ export function BoatBookingForm({
           aria-hidden="true"
         />
 
+        {turnstileSiteKey ? (
+          <TurnstileWidget siteKey={turnstileSiteKey} onToken={onToken} />
+        ) : null}
+
+        <p className="text-sm leading-relaxed text-white/65">
+          Demande sans engagement. Données traitées pour vous recontacter (≤ 24 mois).{" "}
+          <Link
+            href="/politique-de-confidentialite"
+            className="underline decoration-white/30 underline-offset-2 hover:text-white"
+          >
+            Confidentialité
+          </Link>
+          .
+        </p>
+
         {status === "success" && (
           <p className="rounded-2xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-3 text-base text-emerald-50">
             Demande envoyée. Nous vous confirmons la disponibilité rapidement.
@@ -284,7 +307,7 @@ export function BoatBookingForm({
           <Button
             type="submit"
             size="lg"
-            disabled={status === "loading"}
+            disabled={status === "loading" || (Boolean(turnstileSiteKey) && !turnstileToken)}
             className="w-full border border-sky-200/80 bg-white text-base font-semibold text-sky-600 shadow-sm hover:bg-sky-50 hover:text-sky-700 sm:w-auto"
           >
             {status === "loading" ? "Envoi…" : "Envoyer la demande"}

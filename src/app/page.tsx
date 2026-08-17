@@ -3,6 +3,7 @@ import { getContent } from "@/lib/content-store";
 import { SITE_URL } from "@/lib/site-config";
 import { HomePage } from "@/components/home-page";
 import { JsonLd } from "@/components/json-ld";
+import { buildOrganizationGraph } from "@/lib/schema";
 
 export async function generateMetadata(): Promise<Metadata> {
   const c = await getContent();
@@ -17,7 +18,6 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: c.brand.name,
       images: [{ url: "/mana23.1.jpg" }],
       locale: "fr_FR",
-      type: "website",
     },
     twitter: {
       card: "summary_large_image",
@@ -31,28 +31,7 @@ export default async function Page() {
 
   return (
     <>
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "BoatRental",
-          name: content.brand.name,
-          description: content.seo.homeDescription,
-          url: SITE_URL,
-          telephone: content.contact.phone,
-          email: content.contact.email,
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: content.contact.address,
-            addressLocality: "Cassis",
-            postalCode: "13260",
-            addressCountry: "FR",
-          },
-          areaServed: {
-            "@type": "Place",
-            name: "Cassis et calanques",
-          },
-        }}
-      />
+      <JsonLd data={buildOrganizationGraph(content)} />
       <HomePage content={content} />
     </>
   );

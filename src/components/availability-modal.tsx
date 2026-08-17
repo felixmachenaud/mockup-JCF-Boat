@@ -48,20 +48,19 @@ export function AvailabilityModal({ open, onClose }: AvailabilityModalProps) {
     };
   }, [open, onClose, bookingBoat]);
 
-  useEffect(() => {
-    if (!open) {
-      setDraft(defaultAvailabilitySearch);
-      setAppliedSearch(null);
-      setBookingBoat(null);
-    }
-  }, [open]);
-
   const boats = useMemo(() => {
     if (!appliedSearch) return mockBoats.filter((boat) => boat.available);
     return filterBoatsByAvailability(mockBoats, appliedSearch);
   }, [appliedSearch]);
 
   if (!open) return null;
+
+  const handleClose = () => {
+    setDraft(defaultAvailabilitySearch);
+    setAppliedSearch(null);
+    setBookingBoat(null);
+    onClose();
+  };
 
   const handleSearch = () => {
     setAppliedSearch({ ...draft });
@@ -79,7 +78,7 @@ export function AvailabilityModal({ open, onClose }: AvailabilityModalProps) {
           type="button"
           aria-label="Fermer"
           className="absolute inset-0 bg-white/30 backdrop-blur-md"
-          onClick={onClose}
+          onClick={handleClose}
         />
 
         <div className="relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl ring-1 ring-slate-200/80 md:max-h-[90vh] md:max-w-4xl md:rounded-3xl">
@@ -99,7 +98,7 @@ export function AvailabilityModal({ open, onClose }: AvailabilityModalProps) {
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600 active:scale-95"
             >
               <X className="h-4 w-4" />

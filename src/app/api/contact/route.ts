@@ -8,6 +8,8 @@ import {
 } from "@/lib/admin-request";
 import { formatMailRows, sendMail } from "@/lib/mail";
 import { pruneRateLimits, rateLimit } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security-log";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const MAX_BODY_BYTES = 20_000;
 
@@ -16,6 +18,7 @@ const baseSchema = z.object({
   email: z.string().trim().email().max(120),
   phone: z.string().trim().max(40).default(""),
   website: z.string().default(""), // honeypot
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 const messageSchema = baseSchema.extend({
@@ -38,6 +41,15 @@ const bookingSchema = baseSchema.extend({
 
 const payloadSchema = z.discriminatedUnion("type", [messageSchema, bookingSchema]);
 
+function parisTodayISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export async function POST(req: Request) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
@@ -47,8 +59,12 @@ export async function POST(req: Request) {
 
   pruneRateLimits();
   const ip = getClientIp(req);
-  const limited = rateLimit(`contact:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 });
+  const limited = await rateLimit(`contact:${ip}`, {
+    limit: 5,
+    windowMs: 15 * 60 * 1000,
+  });
   if (!limited.ok) {
+    logSecurityEvent("contact.blocked", { reason: "rate_limit", ip });
     return NextResponse.json(
       { error: "Trop de messages envoyés. Réessayez plus tard." },
       {
@@ -77,7 +93,40 @@ export async function POST(req: Request) {
 
   // Honeypot rempli → succès silencieux
   if (data.website) {
+    logSecurityEvent("contact.blocked", { reason: "honeypot", ip });
     return NextResponse.json({ ok: true });
+  }
+
+  const captcha = await verifyTurnstileToken(data.turnstileToken, ip);
+  if (!captcha.ok) {
+    logSecurityEvent("contact.blocked", { reason: "turnstile", ip });
+    return NextResponse.json({ error: captcha.error }, { status: 400 });
+  }
+
+  // Per-email soft limit
+  const emailKey = data.email.toLowerCase();
+  const emailLimited = await rateLimit(`contact-email:${emailKey}`, {
+    limit: 3,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!emailLimited.ok) {
+    logSecurityEvent("contact.blocked", { reason: "email_rate", ip });
+    return NextResponse.json(
+      { error: "Trop de messages pour cette adresse. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(emailLimited.retryAfterSec) },
+      },
+    );
+  }
+
+  if (data.type === "booking") {
+    if (data.date < parisTodayISO()) {
+      return NextResponse.json(
+        { error: "La date de réservation doit être aujourd'hui ou ultérieure." },
+        { status: 400 },
+      );
+    }
   }
 
   try {
@@ -115,6 +164,7 @@ export async function POST(req: Request) {
       });
     }
 
+    logSecurityEvent("contact.submit", { type: data.type, ip });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return genericServerError("[contact]", err);

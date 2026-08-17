@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  assertAuthSecretsReady,
   isAdminConfigured,
   setAdminCookie,
   verifyPassword,
@@ -11,6 +12,7 @@ import {
   getClientIp,
 } from "@/lib/admin-request";
 import { pruneRateLimits, rateLimit } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security-log";
 
 export const runtime = "nodejs";
 
@@ -27,6 +29,12 @@ export async function POST(req: Request) {
   const sizeError = assertContentLength(req, 4_096);
   if (sizeError) return sizeError;
 
+  const secrets = assertAuthSecretsReady();
+  if (!secrets.ok) {
+    logSecurityEvent("admin.auth.unconfigured");
+    return NextResponse.json({ error: secrets.error }, { status: 503 });
+  }
+
   if (!isAdminConfigured() && process.env.NODE_ENV === "production") {
     return NextResponse.json(
       { error: "Administration non configurée" },
@@ -36,7 +44,7 @@ export async function POST(req: Request) {
 
   pruneRateLimits();
   const ip = getClientIp(req);
-  const limited = rateLimit(`admin-login:${ip}`, {
+  const limited = await rateLimit(`admin-login:${ip}`, {
     limit: 8,
     windowMs: 15 * 60 * 1000,
   });
@@ -46,6 +54,21 @@ export async function POST(req: Request) {
       {
         status: 429,
         headers: { "Retry-After": String(limited.retryAfterSec) },
+      },
+    );
+  }
+
+  // Additional lockout after repeated failures (stricter window)
+  const lock = await rateLimit(`admin-login-lock:${ip}`, {
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!lock.ok) {
+    return NextResponse.json(
+      { error: "Compte temporairement verrouillé. Réessayez plus tard." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(lock.retryAfterSec) },
       },
     );
   }
@@ -63,18 +86,25 @@ export async function POST(req: Request) {
   }
 
   if (!verifyPassword(password)) {
-    // Message générique : pas d'énumération / pas d'aide à l'attaquant
+    logSecurityEvent("admin.login.failure", { ip });
     return NextResponse.json({ error: "Identifiants incorrects" }, { status: 401 });
   }
 
   try {
-    await setAdminCookie();
-  } catch {
+    await setAdminCookie({
+      ip,
+      userAgent: req.headers.get("user-agent") || undefined,
+    });
+  } catch (err) {
     return NextResponse.json(
-      { error: "Administration non configurée" },
+      {
+        error:
+          err instanceof Error ? err.message : "Administration non configurée",
+      },
       { status: 503 },
     );
   }
 
+  logSecurityEvent("admin.login.success", { ip });
   return NextResponse.json({ ok: true });
 }

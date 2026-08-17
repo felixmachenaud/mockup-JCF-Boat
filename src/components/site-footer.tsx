@@ -8,6 +8,9 @@ const footerLinks = [
   { href: "/location-bateau-cassis", label: "Location bateau Cassis" },
   { href: "/calanques-de-cassis", label: "Calanques de Cassis" },
   { href: "/#contact", label: "Contact" },
+  { href: "/mentions-legales", label: "Mentions légales" },
+  { href: "/politique-de-confidentialite", label: "Confidentialité" },
+  { href: "/conditions-de-location", label: "Conditions de location" },
 ];
 
 type SiteFooterProps = {

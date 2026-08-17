@@ -45,6 +45,8 @@ export function assertSameOrigin(req: Request): NextResponse | null {
 }
 
 export function getClientIp(req: Request): string {
+  // Sur Vercel, x-forwarded-for est fourni par la plateforme (proxy de confiance).
+  // En self-hosting, ne pas faire confiance à ces en-têtes sans reverse-proxy contrôlé.
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();

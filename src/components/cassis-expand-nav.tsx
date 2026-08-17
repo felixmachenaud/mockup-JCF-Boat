@@ -28,17 +28,14 @@ export function CassisExpandNav() {
   const isCassisSection =
     pathname.startsWith("/calanques-de-cassis") ||
     pathname.startsWith("/location-bateau-cassis");
-  const [open, setOpen] = useState(isCassisSection);
+  const [userOpen, setUserOpen] = useState(false);
+  const open = isCassisSection || userOpen;
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isCassisSection) setOpen(true);
-  }, [isCassisSection]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        if (!isCassisSection) setOpen(false);
+        if (!isCassisSection) setUserOpen(false);
       }
     };
     document.addEventListener("mousedown", close);
@@ -52,9 +49,9 @@ export function CassisExpandNav() {
     const node = ref.current;
     if (!node) return;
 
-    const openMenu = () => setOpen(true);
+    const openMenu = () => setUserOpen(true);
     const closeMenu = () => {
-      if (!isCassisSection) setOpen(false);
+      if (!isCassisSection) setUserOpen(false);
     };
     node.addEventListener("mouseenter", openMenu);
     node.addEventListener("mouseleave", closeMenu);
@@ -102,7 +99,7 @@ export function CassisExpandNav() {
               <Link
                 key={label}
                 href={href}
-                onClick={() => setOpen(true)}
+                onClick={() => setUserOpen(true)}
                 className={cn(linkClass, "shrink-0", active && activeLinkClass)}
                 aria-current={active ? "page" : undefined}
               >

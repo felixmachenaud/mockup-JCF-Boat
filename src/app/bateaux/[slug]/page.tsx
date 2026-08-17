@@ -20,6 +20,7 @@ import { BoatCard } from "@/components/boat-card";
 import { BoatBookingForm } from "@/components/boat-booking-form";
 import { BoatPricingTable } from "@/components/boat-pricing-table";
 import { boatClassificationSummary } from "@/lib/boat-taxonomy";
+import { buildBreadcrumbList, BUSINESS_ID } from "@/lib/schema";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -80,13 +81,25 @@ export default async function BoatDetailPage({ params }: Props) {
   return (
     <main className="relative min-h-screen pb-mobile-nav md:pb-0">
       <JsonLd
+        data={buildBreadcrumbList([
+          { name: "Accueil", path: "/" },
+          { name: "Bateaux", path: "/bateaux" },
+          { name: boat.name, path: `/bateaux/${boat.slug}` },
+        ])}
+      />
+      <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "Product",
-          name: boat.name,
+          "@type": "Service",
+          name: `Location ${boat.name}`,
           description: boat.description || boat.shortDescription,
           image: photos,
-          brand: { "@type": "Brand", name: content.brand.name },
+          provider: { "@id": BUSINESS_ID },
+          areaServed: {
+            "@type": "Place",
+            name: "Cassis et Parc national des Calanques",
+          },
+          serviceType: "Boat rental",
           offers: {
             "@type": "Offer",
             priceCurrency: "EUR",

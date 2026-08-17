@@ -44,10 +44,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: ["/mana23.1.jpg"],
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots:
+    process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production"
+      ? { index: false, follow: false, nocache: true }
+      : { index: true, follow: true },
 };
 
 export const viewport: Viewport = {

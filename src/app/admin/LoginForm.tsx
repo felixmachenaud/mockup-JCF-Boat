@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginForm({ demoHint }: { demoHint?: boolean }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,14 +58,33 @@ export default function LoginForm({ demoHint }: { demoHint?: boolean }) {
 
         <label className="mt-6 block text-xs font-medium text-slate-600">
           Mot de passe
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1.5 h-11 w-full rounded-xl border border-sky-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-            required
-          />
+          <span className="relative mt-1.5 block">
+            <input
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-11 w-full rounded-xl border border-sky-200 bg-white py-2 pr-11 pl-3 text-sm text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-sky-50 hover:text-slate-700"
+              aria-label={
+                showPassword
+                  ? "Masquer le mot de passe"
+                  : "Afficher le mot de passe"
+              }
+              aria-pressed={showPassword}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden />
+              )}
+            </button>
+          </span>
         </label>
 
         {error && (
