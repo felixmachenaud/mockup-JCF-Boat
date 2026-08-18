@@ -15,6 +15,7 @@ import {
 import { BookingModal } from "@/components/booking-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 type AvailabilityModalProps = {
   open: boolean;
@@ -250,13 +251,17 @@ function AvailabilityRow({
   return (
     <li className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:p-4">
       <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-xl sm:h-20 sm:w-32">
-        <Image
-          src={boat.image}
-          alt={boat.name}
-          fill
-          className="object-cover"
-          sizes="128px"
-        />
+        {isCmsImageSrc(boat.image) ? (
+          <Image
+            src={boat.image}
+            alt={boat.name}
+            fill
+            className="object-cover"
+            sizes="128px"
+          />
+        ) : (
+          <div className="h-full w-full bg-slate-100" />
+        )}
       </div>
 
       <div className="min-w-0 flex-1">

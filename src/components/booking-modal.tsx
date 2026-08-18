@@ -9,6 +9,7 @@ import { getBoatSpecs } from "@/lib/mock-boats";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 type BookingModalProps = {
   boat: Boat | null;
@@ -123,7 +124,11 @@ export function BookingModal({ boat, onClose }: BookingModalProps) {
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 md:px-6">
           <div className="flex items-center gap-4">
             <div className="relative hidden h-16 w-20 shrink-0 overflow-hidden rounded-xl sm:block">
-              <Image src={boat.image} alt={boat.name} fill className="object-cover" />
+              {isCmsImageSrc(boat.image) ? (
+                <Image src={boat.image} alt={boat.name} fill className="object-cover" />
+              ) : (
+                <div className="h-full w-full bg-slate-100" />
+              )}
             </div>
             <div>
               <p className="text-xs font-medium tracking-[0.15em] text-sky-500 uppercase">

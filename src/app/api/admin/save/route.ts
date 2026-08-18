@@ -8,6 +8,7 @@ import {
 } from "@/lib/admin-request";
 import {
   ContentConflictError,
+  ContentValidationError,
   getContentStoreMode,
   saveContent,
 } from "@/lib/content-store";
@@ -82,8 +83,12 @@ export async function POST(req: Request) {
     revalidatePath("/location-bateau-cassis");
     revalidatePath("/calanques-de-cassis");
     revalidatePath("/sitemap.xml");
-    for (const boat of parsed.data.boats) {
-      if (boat.slug) revalidatePath(`/bateaux/${boat.slug}`);
+    const boatSlugs = new Set([
+      ...meta.previousBoatSlugs,
+      ...parsed.data.boats.map((boat) => boat.slug),
+    ]);
+    for (const slug of boatSlugs) {
+      if (slug) revalidatePath(`/bateaux/${slug}`);
     }
 
     logSecurityEvent("admin.save", {
@@ -93,6 +98,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, meta });
   } catch (err) {
+    if (err instanceof ContentValidationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof ContentConflictError) {
       return NextResponse.json(
         {

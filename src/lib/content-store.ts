@@ -182,14 +182,53 @@ async function writeRevisionSnapshot(
   }
 }
 
-function assertUniqueBoatSlugs(content: SiteContent): void {
-  const slugs = content.boats.map((b) => b.slug).filter(Boolean);
-  if (new Set(slugs).size !== slugs.length) {
-    throw new Error("Slugs bateaux en double");
+function hasDuplicates(values: string[]): boolean {
+  const filled = values.filter(Boolean);
+  return new Set(filled).size !== filled.length;
+}
+
+function assertContentIntegrity(content: SiteContent): void {
+  if (hasDuplicates(content.boats.map((b) => b.slug))) {
+    throw new ContentValidationError("Deux bateaux ont le même slug URL.");
   }
-  const ids = content.boats.map((b) => b.id).filter(Boolean);
-  if (new Set(ids).size !== ids.length) {
-    throw new Error("IDs bateaux en double");
+  if (hasDuplicates(content.boats.map((b) => b.id))) {
+    throw new ContentValidationError("Deux bateaux ont le même identifiant.");
+  }
+  if (hasDuplicates(content.calanques.map((c) => c.slug))) {
+    throw new ContentValidationError("Deux calanques ont le même slug.");
+  }
+  if (hasDuplicates(content.calanques.map((c) => c.id))) {
+    throw new ContentValidationError("Deux calanques ont le même identifiant.");
+  }
+
+  const boatWithoutSlug = content.boats.find((b) => !b.slug.trim());
+  if (boatWithoutSlug) {
+    throw new ContentValidationError(
+      `« ${boatWithoutSlug.name} » n'a pas de slug URL.`,
+    );
+  }
+  const publishedBoatNoImage = content.boats.find(
+    (b) => b.published && !b.image.trim(),
+  );
+  if (publishedBoatNoImage) {
+    throw new ContentValidationError(
+      `« ${publishedBoatNoImage.name} » est publié sans photo principale.`,
+    );
+  }
+  const publishedCalNoImage = content.calanques.find(
+    (c) => c.published && c.images.filter((src) => src.trim()).length === 0,
+  );
+  if (publishedCalNoImage) {
+    throw new ContentValidationError(
+      `« ${publishedCalNoImage.name} » n'a pas de photo.`,
+    );
+  }
+}
+
+export class ContentValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ContentValidationError";
   }
 }
 
@@ -209,11 +248,14 @@ export async function saveContent(
     expectedVersion: number;
     updatedBy?: string;
   },
-): Promise<ContentMeta> {
+): Promise<ContentMeta & { previousBoatSlugs: string[] }> {
   assertWritableStore();
-  assertUniqueBoatSlugs(next);
+  assertContentIntegrity(next);
 
   const current = await fetchDocument();
+  const previousBoatSlugs = current.content.boats
+    .map((b) => b.slug)
+    .filter(Boolean);
   if (current.meta.version !== opts.expectedVersion) {
     throw new ContentConflictError(
       current.meta.version,
@@ -242,7 +284,7 @@ export async function saveContent(
   }
 
   revalidateTag(CACHE_TAG, REVALIDATE_PROFILE);
-  return meta;
+  return { ...meta, previousBoatSlugs };
 }
 
 export function isContentStoreConfigured() {

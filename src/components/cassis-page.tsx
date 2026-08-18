@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { CmsCalanque } from "@/lib/site-content";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 function ExpandingGallery({
   calanque,
@@ -15,6 +16,7 @@ function ExpandingGallery({
   index: number;
 }) {
   const [active, setActive] = useState(0);
+  const photos = calanque.images.filter(isCmsImageSrc);
 
   const scrollToMap = () => {
     document.getElementById("carte-calanques")?.scrollIntoView({ behavior: "smooth" });
@@ -42,9 +44,9 @@ function ExpandingGallery({
         {/* Mobile — image principale + miniatures tactiles */}
         <div className="md:hidden">
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/15">
-            {calanque.images[active] ? (
+            {photos[active] ? (
               <Image
-                src={calanque.images[active]}
+                src={photos[active]}
                 alt={`${calanque.name} — vue ${active + 1}`}
                 fill
                 className="object-cover"
@@ -58,7 +60,7 @@ function ExpandingGallery({
             )}
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {calanque.images.map((src, i) => (
+            {photos.map((src, i) => (
               <button
                 key={src}
                 type="button"
@@ -83,7 +85,7 @@ function ExpandingGallery({
           className="hidden h-[400px] gap-3 md:flex lg:h-[520px]"
           onMouseLeave={() => setActive(0)}
         >
-          {calanque.images.map((src, i) => (
+          {photos.map((src, i) => (
             <button
               key={src}
               type="button"

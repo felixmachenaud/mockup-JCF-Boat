@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getContent } from "@/lib/content-store";
 import { boatsByIds } from "@/lib/boats";
 import { SITE_URL } from "@/lib/site-config";
+import { isCmsImageSrc } from "@/lib/cms-image";
 import { PageBackground } from "@/components/page-background";
 import { SiteHeader } from "@/components/site-header";
 import { MobileNav } from "@/components/mobile-nav";
@@ -89,7 +90,7 @@ export default async function PillarPage() {
                 {page.intro}
               </p>
             </div>
-            {page.image && (
+            {isCmsImageSrc(page.image) && (
               <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/15">
                 <Image
                   src={page.image}

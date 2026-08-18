@@ -8,6 +8,7 @@ import {
   emptyReview,
   emptyTeamMember,
   slugify,
+  uniqueSlug,
   type BoatCategory,
   type CmsBoat,
   type CmsCalanque,
@@ -63,6 +64,55 @@ const BOAT_CATEGORIES: { value: BoatCategory; label: string }[] = [
 
 const HULL_TYPE_VALUES = new Set(BOAT_HULL_TYPE_OPTIONS.map((o) => o.value));
 
+function nextDisplayOrder(items: { displayOrder: number }[]): number {
+  return items.reduce((max, item) => Math.max(max, item.displayOrder), 0) + 1;
+}
+
+function validateContentForSave(content: SiteContent): string | null {
+  const email = content.contact.email.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return "Indiquez un email de contact valide (onglet Réglages) avant d'enregistrer.";
+  }
+
+  const publishedBoat = content.boats.find((b) => b.published && !b.image.trim());
+  if (publishedBoat) {
+    return `« ${publishedBoat.name} » est publié sans photo principale.`;
+  }
+
+  const emptySlug = content.boats.find((b) => !b.slug.trim());
+  if (emptySlug) {
+    return `« ${emptySlug.name} » n'a pas de slug URL.`;
+  }
+
+  const boatSlugs = content.boats.map((b) => b.slug);
+  if (new Set(boatSlugs).size !== boatSlugs.length) {
+    return "Deux bateaux ont le même slug URL — rendez-les uniques.";
+  }
+
+  const emptyCal = content.calanques.find(
+    (c) => c.published && c.images.filter((src) => src.trim()).length === 0,
+  );
+  if (emptyCal) {
+    return `« ${emptyCal.name} » n'a pas de photo — ajoutez-en au moins une avant d'enregistrer.`;
+  }
+
+  const calSlugs = content.calanques.map((c) => c.slug).filter(Boolean);
+  if (new Set(calSlugs).size !== calSlugs.length) {
+    return "Deux calanques ont le même slug — rendez-les uniques.";
+  }
+
+  const boatIds = new Set(content.boats.map((b) => b.id));
+  const unknownFeatured = [
+    ...content.pages.location.featuredBoatIds,
+    ...content.pages.calanques.featuredBoatIds,
+  ].filter((id) => id && !boatIds.has(id));
+  if (unknownFeatured.length) {
+    return `IDs bateaux inconnus (pages Location / Calanques) : ${[...new Set(unknownFeatured)].join(", ")}.`;
+  }
+
+  return null;
+}
+
 function emptyHighlight(): CmsHighlight {
   return { id: `h-${Date.now()}`, title: "", text: "" };
 }
@@ -110,28 +160,16 @@ export default function Editor({
     setBusy(true);
     setMessage(null);
     try {
-      const emptyCal = content.calanques.find((c) => c.images.length === 0);
-      if (emptyCal) {
-        setMessage({
-          type: "warn",
-          text: `« ${emptyCal.name} » n'a pas de photo — ajoutez-en au moins une avant d'enregistrer.`,
-        });
-        setBusy(false);
-        return;
-      }
-
-      const slugs = content.boats.map((b) => b.slug);
-      if (new Set(slugs).size !== slugs.length) {
-        setMessage({
-          type: "err",
-          text: "Deux bateaux ont le même slug URL — rendez-les uniques.",
-        });
+      const invalid = validateContentForSave(content);
+      if (invalid) {
+        setMessage({ type: "warn", text: invalid });
         setBusy(false);
         return;
       }
 
       const res = await fetch("/api/admin/save", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ expectedVersion: version, content }),
       });
@@ -141,8 +179,15 @@ export default function Editor({
         currentVersion?: number;
       };
       if (!res.ok) {
-        if (res.status === 409 && typeof j.currentVersion === "number") {
-          setVersion(j.currentVersion);
+        if (res.status === 409) {
+          setMessage({
+            type: "err",
+            text:
+              j.error ||
+              "Le contenu a été modifié ailleurs. Rechargement de la page…",
+          });
+          window.location.reload();
+          return;
         }
         setMessage({ type: "err", text: j.error || "Échec de la sauvegarde" });
         return;
@@ -361,7 +406,13 @@ export default function Editor({
               type="button"
               className={`mt-3 w-full py-2 text-sm ${dashedBtnCls}`}
               onClick={() => {
-                const boat = emptyBoat();
+                const nextOrder = nextDisplayOrder(content.boats);
+                const boat = emptyBoat(nextOrder);
+                boat.slug = uniqueSlug(
+                  "nouveau-bateau",
+                  content.boats.map((b) => b.slug),
+                  "nouveau-bateau",
+                );
                 setContent((c) => ({ ...c, boats: [...c.boats, boat] }));
                 setBoatIndex(content.boats.length);
               }}
@@ -373,6 +424,9 @@ export default function Editor({
           {activeBoat && (
             <BoatEditor
               boat={activeBoat}
+              takenSlugs={content.boats
+                .filter((b) => b.id !== activeBoat.id)
+                .map((b) => b.slug)}
               onChange={(boat) => {
                 setContent((c) => ({
                   ...c,
@@ -427,7 +481,15 @@ export default function Editor({
               items={content.calanques}
               onChange={(items) => setContent((c) => ({ ...c, calanques: items }))}
               addLabel="+ Ajouter une calanque"
-              emptyValue={emptyCalanque()}
+              createItem={() => {
+                const item = emptyCalanque(nextDisplayOrder(content.calanques));
+                const slug = uniqueSlug(
+                  "nouvelle-calanque",
+                  content.calanques.map((c) => c.slug),
+                  "nouvelle-calanque",
+                );
+                return { ...item, slug, id: slug };
+              }}
               renderItem={(item, onChange) => (
                 <CalanqueEditor item={item} onChange={onChange} />
               )}
@@ -472,7 +534,7 @@ export default function Editor({
               items={content.team.members}
               onChange={(members) => patch("team", { members })}
               addLabel="+ Ajouter un membre"
-              emptyValue={emptyTeamMember()}
+              createItem={() => emptyTeamMember(nextDisplayOrder(content.team.members))}
               renderItem={(item, onChange) => (
                 <TeamMemberEditor item={item} onChange={onChange} />
               )}
@@ -512,7 +574,7 @@ export default function Editor({
               items={content.reviews.items}
               onChange={(items) => patch("reviews", { items })}
               addLabel="+ Ajouter un avis"
-              emptyValue={emptyReview()}
+              createItem={() => emptyReview(nextDisplayOrder(content.reviews.items))}
               renderItem={(item, onChange) => (
                 <ReviewEditor item={item} onChange={onChange} />
               )}
@@ -630,7 +692,21 @@ export default function Editor({
       {message && <Banner type={message.type}>{message.text}</Banner>}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sky-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          {message ? (
+            <p
+              className={`mb-2 text-sm ${
+                message.type === "ok"
+                  ? "text-emerald-700"
+                  : message.type === "warn"
+                    ? "text-amber-800"
+                    : "text-rose-700"
+              }`}
+            >
+              {message.text}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={exportJson}
@@ -646,6 +722,7 @@ export default function Editor({
           >
             {busy ? "Enregistrement…" : "Enregistrer"}
           </button>
+          </div>
         </div>
       </div>
     </div>
@@ -767,10 +844,12 @@ function DestinationPageEditor({
 
 function BoatEditor({
   boat,
+  takenSlugs,
   onChange,
   onDelete,
 }: {
   boat: CmsBoat;
+  takenSlugs: string[];
   onChange: (b: CmsBoat) => void;
   onDelete: () => void;
 }) {
@@ -808,12 +887,13 @@ function BoatEditor({
         />
       </div>
 
-      <Field
+      <NumberField
         label="Ordre d'affichage"
-        value={String(boat.displayOrder)}
-        onChange={(v) =>
-          onChange({ ...boat, displayOrder: Number(v) || boat.displayOrder })
-        }
+        value={boat.displayOrder}
+        min={0}
+        max={10000}
+        onChange={(displayOrder) => onChange({ ...boat, displayOrder })}
+        hint="Plus le chiffre est petit, plus le bateau apparaît haut dans la liste (1 = premier). Un nouveau bateau est placé à la fin."
       />
 
       <ImageField
@@ -844,7 +924,10 @@ function BoatEditor({
             type="button"
             className="mt-1.5 text-[11px] text-sky-600 hover:text-sky-800"
             onClick={() =>
-              onChange({ ...boat, slug: slugify(boat.name) || boat.slug })
+              onChange({
+                ...boat,
+                slug: uniqueSlug(boat.name, takenSlugs, boat.slug || "bateau"),
+              })
             }
           >
             Régénérer
@@ -881,10 +964,12 @@ function BoatEditor({
       </TwoCol>
 
       <TwoCol>
-        <Field
+        <NumberField
           label="Année"
-          value={String(boat.year)}
-          onChange={(v) => onChange({ ...boat, year: Number(v) || boat.year })}
+          value={boat.year}
+          min={1950}
+          max={2100}
+          onChange={(year) => onChange({ ...boat, year })}
         />
         <label className={labelCls}>
           Type de coque
@@ -981,30 +1066,30 @@ function BoatEditor({
         </p>
       </div>
 
-      <Field
+      <NumberField
         label="Capacité (personnes)"
-        value={String(boat.capacity)}
-        onChange={(v) =>
-          onChange({ ...boat, capacity: Number(v) || boat.capacity })
-        }
+        value={boat.capacity}
+        min={1}
+        max={50}
+        onChange={(capacity) => onChange({ ...boat, capacity })}
       />
 
       <PricingRowsEditor boat={boat} onChange={onChange} />
 
       <TwoCol>
-        <Field
+        <NumberField
           label="Prix indicatif carte / jour (€)"
-          value={String(boat.pricePerDay)}
-          onChange={(v) =>
-            onChange({ ...boat, pricePerDay: Number(v) || 0 })
-          }
+          value={boat.pricePerDay}
+          min={0}
+          max={100000}
+          onChange={(pricePerDay) => onChange({ ...boat, pricePerDay })}
         />
-        <Field
+        <NumberField
           label="Prix indicatif demi-journée (€)"
-          value={String(boat.priceHalfDay)}
-          onChange={(v) =>
-            onChange({ ...boat, priceHalfDay: Number(v) || 0 })
-          }
+          value={boat.priceHalfDay}
+          min={0}
+          max={100000}
+          onChange={(priceHalfDay) => onChange({ ...boat, priceHalfDay })}
         />
       </TwoCol>
 
@@ -1014,10 +1099,13 @@ function BoatEditor({
           value={boat.location}
           onChange={(v) => onChange({ ...boat, location: v })}
         />
-        <Field
+        <NumberField
           label="Note"
-          value={String(boat.rating)}
-          onChange={(v) => onChange({ ...boat, rating: Number(v) || 0 })}
+          value={boat.rating}
+          min={0}
+          max={5}
+          step={0.1}
+          onChange={(rating) => onChange({ ...boat, rating })}
         />
       </TwoCol>
 
@@ -1249,12 +1337,13 @@ function CalanqueEditor({
           checked={item.published}
           onChange={(published) => onChange({ ...item, published })}
         />
-        <Field
+        <NumberField
           label="Ordre d'affichage"
-          value={String(item.displayOrder)}
-          onChange={(v) =>
-            onChange({ ...item, displayOrder: Number(v) || item.displayOrder })
-          }
+          value={item.displayOrder}
+          min={0}
+          max={10000}
+          onChange={(displayOrder) => onChange({ ...item, displayOrder })}
+          hint="Plus le chiffre est petit, plus haut dans la liste."
         />
       </div>
 
@@ -1307,15 +1396,21 @@ function CalanqueEditor({
         onChange={(images) => onChange({ ...item, images })}
       />
       <ThreeCol>
-        <Field
+        <NumberField
           label="Latitude"
-          value={String(item.lat)}
-          onChange={(v) => onChange({ ...item, lat: Number(v) || item.lat })}
+          value={item.lat}
+          min={-90}
+          max={90}
+          step={0.0001}
+          onChange={(lat) => onChange({ ...item, lat })}
         />
-        <Field
+        <NumberField
           label="Longitude"
-          value={String(item.lng)}
-          onChange={(v) => onChange({ ...item, lng: Number(v) || item.lng })}
+          value={item.lng}
+          min={-180}
+          max={180}
+          step={0.0001}
+          onChange={(lng) => onChange({ ...item, lng })}
         />
         <Field
           label="Lien Google Maps"
@@ -1342,12 +1437,13 @@ function TeamMemberEditor({
           checked={item.published}
           onChange={(published) => onChange({ ...item, published })}
         />
-        <Field
+        <NumberField
           label="Ordre d'affichage"
-          value={String(item.displayOrder)}
-          onChange={(v) =>
-            onChange({ ...item, displayOrder: Number(v) || item.displayOrder })
-          }
+          value={item.displayOrder}
+          min={0}
+          max={10000}
+          onChange={(displayOrder) => onChange({ ...item, displayOrder })}
+          hint="Plus le chiffre est petit, plus haut dans la liste."
         />
       </div>
       <TwoCol>
@@ -1392,12 +1488,13 @@ function ReviewEditor({
           checked={item.published}
           onChange={(published) => onChange({ ...item, published })}
         />
-        <Field
+        <NumberField
           label="Ordre d'affichage"
-          value={String(item.displayOrder)}
-          onChange={(v) =>
-            onChange({ ...item, displayOrder: Number(v) || item.displayOrder })
-          }
+          value={item.displayOrder}
+          min={0}
+          max={10000}
+          onChange={(displayOrder) => onChange({ ...item, displayOrder })}
+          hint="Plus le chiffre est petit, plus haut dans la liste."
         />
       </div>
       <TwoCol>
@@ -1527,6 +1624,48 @@ function CheckboxField({
   );
 }
 
+function NumberField({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  hint,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  hint?: string;
+}) {
+  return (
+    <label className={labelCls}>
+      {label}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => {
+          const n = e.target.valueAsNumber;
+          if (Number.isNaN(n)) return;
+          onChange(n);
+        }}
+        className={`${inputCls} h-10`}
+      />
+      {hint ? (
+        <span className="mt-1 block text-[11px] font-normal text-slate-400">
+          {hint}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
 function Field({
   label,
   value,
@@ -1578,19 +1717,13 @@ function ImageField({
     setUploading(true);
     setError(null);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      const j = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !j.url) {
-        setError(j.error || "Upload échoué");
-        return;
-      }
-      onChange(j.url);
+      const url = await postAdminUpload(file);
+      onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur upload");
     } finally {
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -1615,7 +1748,7 @@ function ImageField({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
             className="hidden"
             onChange={(e) => onFile(e.target.files?.[0])}
           />
@@ -1628,6 +1761,9 @@ function ImageField({
             {uploading ? "Upload…" : "Uploader une photo"}
           </button>
           {error && <p className="text-xs text-rose-600">{error}</p>}
+          <p className="text-[11px] text-slate-400">
+            JPEG, PNG ou WebP — les photos iPhone sont converties automatiquement.
+          </p>
         </div>
       </div>
     </div>
@@ -1644,23 +1780,24 @@ function GalleryField({
   onChange: (imgs: string[]) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function onFiles(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
+    setError(null);
     try {
       const next = [...images];
       for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-        const j = (await res.json()) as { url?: string };
-        if (res.ok && j.url) next.push(j.url);
+        next.push(await postAdminUpload(file));
       }
       onChange(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur upload");
     } finally {
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -1690,7 +1827,7 @@ function GalleryField({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
         multiple
         className="hidden"
         onChange={(e) => onFiles(e.target.files)}
@@ -1703,6 +1840,10 @@ function GalleryField({
       >
         {uploading ? "Upload…" : "+ Ajouter des photos"}
       </button>
+      {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
+      <p className="mt-1 text-[11px] text-slate-400">
+        JPEG, PNG ou WebP — les photos iPhone sont converties automatiquement.
+      </p>
     </div>
   );
 }
@@ -1713,12 +1854,14 @@ function ArrayEditor<T extends { id?: string }>({
   renderItem,
   addLabel,
   emptyValue,
+  createItem,
 }: {
   items: T[];
   onChange: (items: T[]) => void;
   renderItem: (item: T, onChange: (item: T) => void, index: number) => React.ReactNode;
   addLabel: string;
-  emptyValue: T;
+  emptyValue?: T;
+  createItem?: () => T;
 }) {
   return (
     <div className="space-y-4">
@@ -1746,14 +1889,15 @@ function ArrayEditor<T extends { id?: string }>({
       ))}
       <button
         type="button"
-        onClick={() =>
-          onChange([
-            ...items,
-            typeof emptyValue === "object" && emptyValue !== null
+        onClick={() => {
+          const next = createItem
+            ? createItem()
+            : emptyValue && typeof emptyValue === "object"
               ? { ...emptyValue, id: `${Date.now()}` }
-              : emptyValue,
-          ])
-        }
+              : emptyValue;
+          if (next === undefined) return;
+          onChange([...items, next]);
+        }}
         className={`w-full py-3 text-sm ${dashedBtnCls}`}
       >
         {addLabel}
@@ -1779,4 +1923,92 @@ function Banner({
       {children}
     </div>
   );
+}
+
+const CLIENT_MAX_EDGE = 2400;
+const VERCEL_SAFE_BYTES = 4 * 1024 * 1024;
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number,
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), type, quality);
+  });
+}
+
+async function prepareImageForUpload(file: File): Promise<File> {
+  if (file.type === "image/gif") return file;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+
+  const scale = Math.min(
+    1,
+    CLIENT_MAX_EDGE / Math.max(bitmap.width, bitmap.height),
+  );
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  let output =
+    (await canvasToBlob(canvas, "image/webp", 0.82)) ??
+    (await canvasToBlob(canvas, "image/jpeg", 0.85));
+  if (!output) return file;
+
+  if (output.size > VERCEL_SAFE_BYTES) {
+    const smaller = await canvasToBlob(canvas, "image/jpeg", 0.7);
+    if (smaller && smaller.size < output.size) output = smaller;
+  }
+
+  const ext = output.type === "image/webp" ? ".webp" : ".jpg";
+  const name = file.name.replace(/\.[^.]+$/, "") + ext;
+  return new File([output], name, { type: output.type || "image/jpeg" });
+}
+
+async function postAdminUpload(file: File): Promise<string> {
+  let prepared = file;
+  try {
+    prepared = await prepareImageForUpload(file);
+  } catch {
+    prepared = file;
+  }
+
+  if (/heic|heif/i.test(file.type) && prepared === file) {
+    throw new Error(
+      "Photo iPhone HEIC non convertie — exportez-la en JPEG ou PNG.",
+    );
+  }
+
+  const fd = new FormData();
+  fd.append("file", prepared);
+  const res = await fetch("/api/admin/upload", {
+    method: "POST",
+    body: fd,
+    credentials: "same-origin",
+  });
+  let data: { url?: string; error?: string } = {};
+  try {
+    data = (await res.json()) as { url?: string; error?: string };
+  } catch {
+    throw new Error("Erreur serveur");
+  }
+  if (!res.ok || !data.url) {
+    throw new Error(data.error || "Upload échoué");
+  }
+  return data.url;
 }

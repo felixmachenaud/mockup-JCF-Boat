@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { SiteContent } from "@/lib/site-content";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 type Props = {
   content: SiteContent["presentation"];
@@ -36,7 +37,7 @@ export function PresentationSection({ content }: Props) {
             </ul>
           )}
         </div>
-        {content.image && (
+        {isCmsImageSrc(content.image) && (
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/15">
             <Image
               src={content.image}

@@ -1,13 +1,21 @@
 import type { CmsBoat, CmsCalanque, CmsReview, CmsTeamMember } from "./site-content";
 import { formatPrice } from "./utils";
+import { isCmsImageSrc } from "./cms-image";
 
 function byOrder<T extends { displayOrder: number }>(a: T, b: T) {
   return a.displayOrder - b.displayOrder;
 }
 
-/** Photos empilées : image catalogue (.1) puis galerie (.2, .3…) */
+/** Photos empilées : image catalogue puis galerie, sans URLs vides. */
 export function boatPhotoStack(boat: CmsBoat): string[] {
-  return [boat.image, ...boat.gallery.filter((g) => g !== boat.image)];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const src of [boat.image, ...boat.gallery]) {
+    if (!isCmsImageSrc(src) || seen.has(src)) continue;
+    seen.add(src);
+    out.push(src);
+  }
+  return out;
 }
 
 /** Prix le plus bas disponible (carte « à partir de ») */

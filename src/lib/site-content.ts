@@ -188,6 +188,19 @@ function slugify(input: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+export function uniqueSlug(
+  base: string,
+  taken: string[],
+  fallback = "item",
+): string {
+  const root = slugify(base) || fallback;
+  const used = new Set(taken.filter(Boolean));
+  if (!used.has(root)) return root;
+  let n = 2;
+  while (used.has(`${root}-${n}`)) n += 1;
+  return `${root}-${n}`;
+}
+
 const defaultBoats: CmsBoat[] = DEFAULT_FLEET;
 
 const defaultReviews: CmsReview[] = mockReviews.map((r, i) => ({
@@ -645,7 +658,7 @@ export function mergeContent(
   };
 }
 
-export function emptyBoat(): CmsBoat {
+export function emptyBoat(displayOrder = 99): CmsBoat {
   return {
     id: `boat-${Date.now()}`,
     slug: "nouveau-bateau",
@@ -663,7 +676,7 @@ export function emptyBoat(): CmsBoat {
     available: true,
     published: true,
     featured: false,
-    displayOrder: 99,
+    displayOrder,
     tags: [],
     shortDescription: "",
     description: "",
@@ -687,7 +700,7 @@ export function emptyBoat(): CmsBoat {
   };
 }
 
-export function emptyReview(): CmsReview {
+export function emptyReview(displayOrder = 99): CmsReview {
   return {
     id: `review-${Date.now()}`,
     name: "",
@@ -698,11 +711,11 @@ export function emptyReview(): CmsReview {
     date: "",
     source: "Client",
     published: true,
-    displayOrder: 99,
+    displayOrder,
   };
 }
 
-export function emptyCalanque(): CmsCalanque {
+export function emptyCalanque(displayOrder = 99): CmsCalanque {
   return {
     id: `calanque-${Date.now()}`,
     slug: "nouvelle-calanque",
@@ -715,11 +728,11 @@ export function emptyCalanque(): CmsCalanque {
     lng: 5.5,
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Cassis",
     published: true,
-    displayOrder: 99,
+    displayOrder,
   };
 }
 
-export function emptyTeamMember(): CmsTeamMember {
+export function emptyTeamMember(displayOrder = 99): CmsTeamMember {
   return {
     id: `member-${Date.now()}`,
     name: "",
@@ -727,7 +740,7 @@ export function emptyTeamMember(): CmsTeamMember {
     bio: "",
     image: "/equipe.jpg",
     published: true,
-    displayOrder: 99,
+    displayOrder,
   };
 }
 

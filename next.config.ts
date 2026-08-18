@@ -52,8 +52,16 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  serverExternalPackages: ["sharp"],
+  experimental: {
+    proxyClientMaxBodySize: "10mb",
+  },
   poweredByHeader: false,
   images: {
+    localPatterns: [
+      { pathname: "/api/media/**" },
+      { pathname: "/**" },
+    ],
     remotePatterns: [
       {
         protocol: "https",
@@ -90,6 +98,15 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "no-store, no-cache, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive, nosnippet",
           },
         ],
       },

@@ -71,7 +71,23 @@ const cmsBoatSchema = z
     highSeasonLabel: medium,
     pricingRows: z.array(cmsPriceRowSchema).max(20),
   })
-  .strict();
+  .strict()
+  .superRefine((boat, ctx) => {
+    if (!boat.slug.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Slug URL requis",
+        path: ["slug"],
+      });
+    }
+    if (boat.published && !boat.image.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Photo principale requise pour un bateau publié",
+        path: ["image"],
+      });
+    }
+  });
 
 const cmsReviewSchema = z
   .object({
@@ -103,7 +119,23 @@ const cmsCalanqueSchema = z
     published: z.boolean(),
     displayOrder: z.number().int().min(0).max(10_000),
   })
-  .strict();
+  .strict()
+  .superRefine((item, ctx) => {
+    if (!item.slug.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Slug requis",
+        path: ["slug"],
+      });
+    }
+    if (item.published && item.images.filter((src) => src.trim()).length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Au moins une photo est requise pour une calanque publiée",
+        path: ["images"],
+      });
+    }
+  });
 
 const cmsTeamMemberSchema = z
   .object({

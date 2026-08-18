@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CmsBoat } from "@/lib/site-content";
 import { boatFromPrice } from "@/lib/boats";
 import { formatPrice } from "@/lib/utils";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 type BoatCardProps = {
   boat: CmsBoat;
@@ -18,13 +19,17 @@ export function BoatCard({ boat }: BoatCardProps) {
         href={`/bateaux/${boat.slug}`}
         className="relative aspect-[4/3] overflow-hidden"
       >
-        <Image
-          src={boat.image}
-          alt={`${boat.name} — location bateau Cassis`}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 768px) 100vw, 33vw"
-        />
+        {isCmsImageSrc(boat.image) ? (
+          <Image
+            src={boat.image}
+            alt={`${boat.name} — location bateau Cassis`}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 33vw"
+          />
+        ) : (
+          <div className="h-full w-full bg-black/40" />
+        )}
         {!boat.available && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-800">

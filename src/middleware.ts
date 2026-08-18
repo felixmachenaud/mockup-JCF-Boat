@@ -26,9 +26,10 @@ export function middleware() {
 export const config = {
   matcher: [
     /*
-     * Apply to all routes except Next internals and static file fingerprints.
-     * Still covers HTML pages, sitemap, robots, and API responses.
+     * Pages HTML only. API multipart (upload) and media streams must not
+     * pass through middleware — Next.js buffers the body and the default
+     * limit rejects photos, which looks like a CMS-wide "Erreur serveur".
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/).*)",
   ],
 };

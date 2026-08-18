@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { CmsTeamMember } from "@/lib/site-content";
+import { isCmsImageSrc } from "@/lib/cms-image";
 
 type TeamSectionProps = {
   eyebrow?: string;
@@ -45,7 +46,7 @@ export function TeamSection({
                 >
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
                     <Image
-                      src={m.image || image}
+                      src={isCmsImageSrc(m.image) ? m.image : image || "/equipe.jpg"}
                       alt={m.name}
                       fill
                       className="object-cover"
@@ -71,7 +72,7 @@ export function TeamSection({
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/15">
           <Image
-            src={image}
+            src={isCmsImageSrc(image) ? image : "/equipe.jpg"}
             alt="L'équipe JCF Boat à Cassis"
             fill
             className="object-cover"

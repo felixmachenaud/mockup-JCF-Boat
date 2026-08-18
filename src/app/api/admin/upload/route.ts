@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthed } from "@/lib/admin-auth";
 import {
+  assertContentLength,
   assertSameOrigin,
   genericServerError,
   getClientIp,
@@ -13,18 +14,41 @@ import {
 import { logSecurityEvent } from "@/lib/security-log";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 Mo
-const CLAIMED_ALLOWED = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+
+function uploadFailureResponse(err: unknown): NextResponse {
+  const msg = err instanceof Error ? err.message : "";
+  if (
+    msg &&
+    /image|GIF|volumineux|dimensions|illisible|frames|invalide/i.test(msg)
+  ) {
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+  if (/blob|token|credentials|store|access/i.test(msg)) {
+    console.error("[admin/upload] blob", msg);
+    return NextResponse.json(
+      { error: "Stockage photos indisponible. Réessayez, ou vérifiez Vercel Blob." },
+      { status: 503 },
+    );
+  }
+  if (/sharp|libvips|dlopen/i.test(msg)) {
+    console.error("[admin/upload] sharp", msg);
+    return NextResponse.json(
+      { error: "Traitement d'image indisponible sur le serveur." },
+      { status: 503 },
+    );
+  }
+  return genericServerError("[admin/upload]", err);
+}
 
 export async function POST(req: Request) {
   const originError = assertSameOrigin(req);
   if (originError) return originError;
+
+  const sizeError = assertContentLength(req, MAX_BYTES + 64 * 1024);
+  if (sizeError) return sizeError;
 
   if (!(await isAdminAuthed())) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
@@ -65,7 +89,11 @@ export async function POST(req: Request) {
     );
   }
 
-  if (file.type && !CLAIMED_ALLOWED.has(file.type)) {
+  if (
+    file.type &&
+    !file.type.startsWith("image/") &&
+    file.type !== "application/octet-stream"
+  ) {
     return NextResponse.json(
       { error: "Format non supporté (JPEG, PNG, WebP)" },
       { status: 400 },
@@ -84,9 +112,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    if (err instanceof Error && /image|GIF|volumineux|dimensions|illisible|frames/i.test(err.message)) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    return genericServerError("[admin/upload]", err);
+    return uploadFailureResponse(err);
   }
 }

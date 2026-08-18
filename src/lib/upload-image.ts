@@ -2,7 +2,9 @@ import { put } from "@vercel/blob";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import sharp from "sharp";
+
+export const UPLOAD_PREFIX = "jcf-uploads";
+export const MEDIA_PROXY_PREFIX = "/api/media";
 
 function blobConfigured() {
   return (
@@ -64,41 +66,53 @@ export function detectImageMime(
 
 export type NormalizedImage = {
   buffer: Buffer;
-  mime: "image/webp" | "image/jpeg";
+  mime: "image/webp" | "image/jpeg" | "image/png";
   width: number;
   height: number;
-  ext: ".webp" | ".jpg";
+  ext: ".webp" | ".jpg" | ".png";
 };
 
-/**
- * Decode, dimension-limit, strip metadata and re-encode (SEC-05).
- * GIF/animation rejected. Malformed images rejected.
- */
-export async function normalizeUploadedImage(
+function isSharpModuleError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /Could not load the ["']?sharp["']? module|libvips|ERR_DLOPEN|Cannot find module ['"]sharp|sharp\.node/i.test(
+    msg,
+  );
+}
+
+function passthroughNormalized(
+  input: Buffer,
+  magic: AllowedImageMime,
+): NormalizedImage {
+  if (magic === "image/png") {
+    return { buffer: input, mime: "image/png", width: 0, height: 0, ext: ".png" };
+  }
+  if (magic === "image/webp") {
+    return {
+      buffer: input,
+      mime: "image/webp",
+      width: 0,
+      height: 0,
+      ext: ".webp",
+    };
+  }
+  return { buffer: input, mime: "image/jpeg", width: 0, height: 0, ext: ".jpg" };
+}
+
+async function normalizeWithSharp(
   input: Buffer,
 ): Promise<NormalizedImage> {
-  if (input.length <= 0 || input.length > MAX_INPUT_BYTES) {
-    throw new Error("Fichier trop volumineux (max 8 Mo)");
-  }
-
-  const magic = detectImageMime(input);
-  if (!magic) {
-    throw new Error("Contenu fichier invalide (image attendue)");
-  }
-  if (magic === "image/gif") {
-    throw new Error(
-      "Les GIF animés ne sont pas acceptés — utilisez JPEG, PNG ou WebP",
-    );
-  }
+  const sharp = (await import("sharp")).default;
+  const options = {
+    failOn: "error" as const,
+    animated: false,
+    limitInputPixels: MAX_PIXELS,
+  };
 
   let meta: Awaited<ReturnType<ReturnType<typeof sharp>["metadata"]>>;
   try {
-    meta = await sharp(input, {
-      failOn: "warning",
-      animated: false,
-      limitInputPixels: MAX_PIXELS,
-    }).metadata();
-  } catch {
+    meta = await sharp(input, options).metadata();
+  } catch (err) {
+    if (isSharpModuleError(err)) throw err;
     throw new Error("Image illisible ou corrompue");
   }
 
@@ -115,12 +129,8 @@ export async function normalizeUploadedImage(
   }
 
   const base = () =>
-    sharp(input, {
-      failOn: "warning",
-      animated: false,
-      limitInputPixels: MAX_PIXELS,
-    })
-      .rotate() // apply EXIF orientation, then metadata is dropped on encode
+    sharp(input, options)
+      .rotate()
       .resize({
         width: OUTPUT_MAX_EDGE,
         height: OUTPUT_MAX_EDGE,
@@ -154,22 +164,105 @@ export async function normalizeUploadedImage(
 }
 
 /**
- * Upload image admin → URL publique (uniquement l'asset normalisé).
+ * Decode, dimension-limit, strip metadata and re-encode (SEC-05).
+ * If Sharp is unavailable on the host, fall back to the already-validated bytes
+ * (the admin UI also re-encodes in the browser).
+ */
+export async function normalizeUploadedImage(
+  input: Buffer,
+): Promise<NormalizedImage> {
+  if (input.length <= 0 || input.length > MAX_INPUT_BYTES) {
+    throw new Error("Fichier trop volumineux (max 8 Mo)");
+  }
+
+  const magic = detectImageMime(input);
+  if (!magic) {
+    throw new Error("Contenu fichier invalide (image attendue)");
+  }
+  if (magic === "image/gif") {
+    throw new Error(
+      "Les GIF animés ne sont pas acceptés — utilisez JPEG, PNG ou WebP",
+    );
+  }
+
+  try {
+    return await normalizeWithSharp(input);
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      /illisible|dimensions|trop grande|multi-frames|animées/i.test(err.message)
+    ) {
+      throw err;
+    }
+    console.error(
+      "[upload-image] sharp unavailable, passthrough",
+      err instanceof Error ? err.message : "unknown",
+    );
+    return passthroughNormalized(input, magic);
+  }
+}
+
+function mediaProxyUrl(pathname: string): string {
+  const clean = pathname.replace(/^\/+/, "");
+  return `${MEDIA_PROXY_PREFIX}/${clean}`;
+}
+
+async function putToBlobStore(
+  objectPath: string,
+  buffer: Buffer,
+  mime: NormalizedImage["mime"],
+): Promise<{ url: string; pathname: string }> {
+  const common = {
+    addRandomSuffix: false as const,
+    contentType: mime,
+    cacheControlMaxAge: 60 * 60 * 24 * 365,
+  };
+
+  const attempts: Array<"private" | "public"> = ["private", "public"];
+  let lastError: unknown;
+
+  for (const access of attempts) {
+    try {
+      // Fresh copy: some put() implementations consume the body.
+      const body = new Blob([new Uint8Array(buffer)], { type: mime });
+      const blob = await put(objectPath, body, { ...common, access });
+      return {
+        url: access === "private" ? mediaProxyUrl(blob.pathname) : blob.url,
+        pathname: blob.pathname,
+      };
+    } catch (err) {
+      lastError = err;
+      console.error(
+        `[upload-image] blob put access=${access} failed`,
+        err instanceof Error ? err.message : "unknown",
+      );
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Upload vers le stockage impossible");
+}
+
+/**
+ * Upload image admin → URL affichable sur le site.
+ * Store Blob privé (comme le CMS) + proxy /api/media ; fallback public.
  */
 export async function uploadNormalizedImage(
   normalized: NormalizedImage,
 ): Promise<{ url: string; pathname: string; width: number; height: number }> {
   const unique = `${Date.now()}-${randomBytes(8).toString("hex")}${normalized.ext}`;
+  const objectPath = `${UPLOAD_PREFIX}/${unique}`;
 
   if (blobConfigured()) {
-    const blob = await put(`jcf-uploads/${unique}`, normalized.buffer, {
-      access: "public",
-      addRandomSuffix: false,
-      contentType: normalized.mime,
-    });
+    const stored = await putToBlobStore(
+      objectPath,
+      normalized.buffer,
+      normalized.mime,
+    );
     return {
-      url: blob.url,
-      pathname: blob.pathname,
+      url: stored.url,
+      pathname: stored.pathname,
       width: normalized.width,
       height: normalized.height,
     };
@@ -192,4 +285,11 @@ export async function uploadNormalizedImage(
     width: normalized.width,
     height: normalized.height,
   };
+}
+
+export function isSafeUploadPathname(pathname: string): boolean {
+  return new RegExp(
+    `^${UPLOAD_PREFIX}/[0-9]+-[a-f0-9]+\\.(webp|jpg|jpeg|png)$`,
+    "i",
+  ).test(pathname);
 }
