@@ -72,32 +72,6 @@ export type NormalizedImage = {
   ext: ".webp" | ".jpg" | ".png";
 };
 
-function isSharpModuleError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /Could not load the ["']?sharp["']? module|libvips|ERR_DLOPEN|Cannot find module ['"]sharp|sharp\.node/i.test(
-    msg,
-  );
-}
-
-function passthroughNormalized(
-  input: Buffer,
-  magic: AllowedImageMime,
-): NormalizedImage {
-  if (magic === "image/png") {
-    return { buffer: input, mime: "image/png", width: 0, height: 0, ext: ".png" };
-  }
-  if (magic === "image/webp") {
-    return {
-      buffer: input,
-      mime: "image/webp",
-      width: 0,
-      height: 0,
-      ext: ".webp",
-    };
-  }
-  return { buffer: input, mime: "image/jpeg", width: 0, height: 0, ext: ".jpg" };
-}
-
 async function normalizeWithSharp(
   input: Buffer,
 ): Promise<NormalizedImage> {
@@ -111,8 +85,7 @@ async function normalizeWithSharp(
   let meta: Awaited<ReturnType<ReturnType<typeof sharp>["metadata"]>>;
   try {
     meta = await sharp(input, options).metadata();
-  } catch (err) {
-    if (isSharpModuleError(err)) throw err;
+  } catch {
     throw new Error("Image illisible ou corrompue");
   }
 
@@ -165,8 +138,8 @@ async function normalizeWithSharp(
 
 /**
  * Decode, dimension-limit, strip metadata and re-encode (SEC-05).
- * If Sharp is unavailable on the host, fall back to the already-validated bytes
- * (the admin UI also re-encodes in the browser).
+ * Sharp is mandatory: accepting the original bytes on failure would bypass
+ * the validation and metadata-removal guarantees.
  */
 export async function normalizeUploadedImage(
   input: Buffer,
@@ -185,21 +158,7 @@ export async function normalizeUploadedImage(
     );
   }
 
-  try {
-    return await normalizeWithSharp(input);
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      /illisible|dimensions|trop grande|multi-frames|animées/i.test(err.message)
-    ) {
-      throw err;
-    }
-    console.error(
-      "[upload-image] sharp unavailable, passthrough",
-      err instanceof Error ? err.message : "unknown",
-    );
-    return passthroughNormalized(input, magic);
-  }
+  return normalizeWithSharp(input);
 }
 
 function mediaProxyUrl(pathname: string): string {

@@ -1,7 +1,7 @@
 /**
  * Cloudflare Turnstile verification (SEC-07).
- * When TURNSTILE_SECRET_KEY is unset, verification is skipped (dev / gradual rollout).
- * In production, set both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY.
+ * When TURNSTILE_SECRET_KEY is unset, verification is skipped only in local
+ * development. Public Vercel previews must not become a spam bypass.
  */
 
 export function isTurnstileConfigured(): boolean {
@@ -18,14 +18,8 @@ export async function verifyTurnstileToken(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!secret) {
-    // Preview/dev: allow without captcha. Production: fail closed (SEC-07).
-    if (
-      process.env.NODE_ENV === "production" &&
-      process.env.VERCEL_ENV === "production"
-    ) {
-      console.error(
-        "[turnstile] TURNSTILE_SECRET_KEY missing on production — rejecting submit",
-      );
+    if (process.env.NODE_ENV === "production") {
+      console.error("[turnstile] TURNSTILE_SECRET_KEY missing — rejecting submit");
       return {
         ok: false,
         error: "Protection anti-spam non configurée. Réessayez plus tard.",

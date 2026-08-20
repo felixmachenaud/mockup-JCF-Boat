@@ -1,27 +1,51 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { get, put } from "@vercel/blob";
+import { Redis } from "@upstash/redis";
 
+/** The browser receives the raw token; only a keyed digest is persisted. */
 export type AdminSession = {
-  id: string;
   createdAt: number;
   expiresAt: number;
-  lastActivityAt: number;
+  epoch: number;
   ipHash?: string;
   uaHash?: string;
 };
 
-type SessionStore = Record<string, AdminSession>;
+type LocalSessionStore = {
+  epoch: number;
+  sessions: Record<string, AdminSession>;
+};
 
-const BLOB_KEY = "jcf-admin-sessions.json";
+const SESSION_PREFIX = "jcf-admin-session";
+const SESSION_EPOCH_KEY = `${SESSION_PREFIX}:epoch`;
 const LOCAL_PATH = path.join(process.cwd(), "data", "admin-sessions.json");
 
-function blobConfigured() {
-  return (
-    Boolean(process.env.BLOB_READ_WRITE_TOKEN) ||
-    Boolean(process.env.BLOB_STORE_ID)
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function redisConfigured(): boolean {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
+      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
   );
+}
+
+function getRedis(): Redis {
+  return Redis.fromEnv();
+}
+
+function tokenDigest(token: string): string {
+  // AUTH_SECRET also acts as a server-side pepper. Rotating it invalidates
+  // every existing session key without ever storing the raw browser token.
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret) return createHmac("sha256", secret).update(token).digest("hex");
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function sessionKey(token: string): string {
+  return `${SESSION_PREFIX}:${tokenDigest(token)}`;
 }
 
 function hashMeta(value: string | undefined): string | undefined {
@@ -29,98 +53,124 @@ function hashMeta(value: string | undefined): string | undefined {
   return createHash("sha256").update(value).digest("hex").slice(0, 16);
 }
 
-async function readStore(): Promise<SessionStore> {
-  if (blobConfigured()) {
-    try {
-      const result = await get(BLOB_KEY, { access: "private", useCache: false });
-      if (!result) return {};
-      const text = await new Response(result.stream).text();
-      return JSON.parse(text) as SessionStore;
-    } catch (err) {
-      if (err instanceof Error && /not.?found/i.test(err.message)) return {};
-      console.error("[admin-sessions] blob read failed", err);
-      return {};
-    }
-  }
+export function isSessionStoreConfigured(): boolean {
+  return redisConfigured();
+}
 
+export function assertSessionStoreReady(): { ok: true } | { ok: false; error: string } {
+  if (!isProduction() || redisConfigured()) return { ok: true };
+  return {
+    ok: false,
+    error: "UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN sont requis pour les sessions admin en production.",
+  };
+}
+
+async function readLocalStore(): Promise<LocalSessionStore> {
   try {
     const raw = await fs.readFile(LOCAL_PATH, "utf8");
-    return JSON.parse(raw) as SessionStore;
+    const parsed = JSON.parse(raw) as Partial<LocalSessionStore>;
+    return {
+      epoch: Number(parsed.epoch) || 1,
+      sessions: parsed.sessions || {},
+    };
   } catch {
-    return {};
+    return { epoch: 1, sessions: {} };
   }
 }
 
-async function writeStore(store: SessionStore): Promise<void> {
-  const now = Date.now();
-  for (const [id, session] of Object.entries(store)) {
-    if (session.expiresAt < now) delete store[id];
-  }
-
-  const payload = JSON.stringify(store);
-
-  if (blobConfigured()) {
-    await put(BLOB_KEY, payload, {
-      access: "private",
-      contentType: "application/json",
-      allowOverwrite: true,
-      addRandomSuffix: false,
-    });
-    return;
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "Session store requires Vercel Blob in production (BLOB_READ_WRITE_TOKEN).",
-    );
-  }
-
+async function writeLocalStore(store: LocalSessionStore): Promise<void> {
   await fs.mkdir(path.dirname(LOCAL_PATH), { recursive: true });
-  await fs.writeFile(LOCAL_PATH, payload, "utf8");
+  await fs.writeFile(LOCAL_PATH, JSON.stringify(store), "utf8");
+}
+
+async function currentEpoch(redis: Redis): Promise<number> {
+  const existing = await redis.get<number>(SESSION_EPOCH_KEY);
+  if (typeof existing === "number" && Number.isFinite(existing) && existing > 0) {
+    return existing;
+  }
+  await redis.set(SESSION_EPOCH_KEY, 1, { nx: true });
+  return (await redis.get<number>(SESSION_EPOCH_KEY)) || 1;
 }
 
 export async function createSession(opts: {
   maxAgeSec: number;
   ip?: string;
   userAgent?: string;
-}): Promise<AdminSession> {
-  const store = await readStore();
-  const id = randomBytes(32).toString("hex");
+}): Promise<{ token: string; session: AdminSession }> {
+  const token = randomBytes(32).toString("hex");
   const now = Date.now();
+
+  if (redisConfigured()) {
+    const redis = getRedis();
+    const epoch = await currentEpoch(redis);
+    const session: AdminSession = {
+      createdAt: now,
+      expiresAt: now + opts.maxAgeSec * 1000,
+      epoch,
+      ipHash: hashMeta(opts.ip),
+      uaHash: hashMeta(opts.userAgent),
+    };
+    await redis.set(sessionKey(token), session, { ex: opts.maxAgeSec });
+    return { token, session };
+  }
+
+  if (isProduction()) {
+    throw new Error("Session store requires Upstash Redis in production.");
+  }
+
+  const store = await readLocalStore();
   const session: AdminSession = {
-    id,
     createdAt: now,
     expiresAt: now + opts.maxAgeSec * 1000,
-    lastActivityAt: now,
+    epoch: store.epoch,
     ipHash: hashMeta(opts.ip),
     uaHash: hashMeta(opts.userAgent),
   };
-  store[id] = session;
-  await writeStore(store);
+  store.sessions[tokenDigest(token)] = session;
+  await writeLocalStore(store);
+  return { token, session };
+}
+
+export async function getSession(token: string): Promise<AdminSession | null> {
+  if (redisConfigured()) {
+    const redis = getRedis();
+    const session = await redis.get<AdminSession>(sessionKey(token));
+    if (!session) return null;
+    const epoch = await currentEpoch(redis);
+    return session.epoch === epoch ? session : null;
+  }
+
+  if (isProduction()) return null;
+  const store = await readLocalStore();
+  const session = store.sessions[tokenDigest(token)];
+  if (!session || session.epoch !== store.epoch) return null;
   return session;
 }
 
-export async function getSession(id: string): Promise<AdminSession | null> {
-  const store = await readStore();
-  return store[id] ?? null;
+export async function deleteSession(token: string): Promise<void> {
+  if (redisConfigured()) {
+    await getRedis().del(sessionKey(token));
+    return;
+  }
+  if (isProduction()) return;
+  const store = await readLocalStore();
+  delete store.sessions[tokenDigest(token)];
+  await writeLocalStore(store);
 }
 
-export async function touchSession(id: string): Promise<void> {
-  const store = await readStore();
-  const session = store[id];
-  if (!session) return;
-  session.lastActivityAt = Date.now();
-  store[id] = session;
-  await writeStore(store);
-}
-
-export async function deleteSession(id: string): Promise<void> {
-  const store = await readStore();
-  if (!store[id]) return;
-  delete store[id];
-  await writeStore(store);
-}
-
+/** Incrementing the epoch invalidates every session without rewriting them. */
 export async function revokeAllSessions(): Promise<void> {
-  await writeStore({});
+  if (redisConfigured()) {
+    await getRedis().incr(SESSION_EPOCH_KEY);
+    return;
+  }
+  if (isProduction()) return;
+  const store = await readLocalStore();
+  store.epoch += 1;
+  store.sessions = {};
+  await writeLocalStore(store);
+}
+
+export function isSessionExpired(session: AdminSession): boolean {
+  return Date.now() >= session.expiresAt;
 }

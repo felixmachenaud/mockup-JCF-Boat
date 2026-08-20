@@ -5,16 +5,15 @@ import {
   deleteSession,
   getSession,
   revokeAllSessions,
-  touchSession,
   type AdminSession,
+  assertSessionStoreReady,
+  isSessionExpired,
 } from "@/lib/admin-sessions";
 import { logSecurityEvent } from "@/lib/security-log";
 
 const COOKIE_NAME = "jcf_admin";
 /** Absolute session lifetime */
-const COOKIE_MAX_AGE = 60 * 60 * 8; // 8 heures
-/** Idle timeout — sliding on activity */
-const IDLE_MS = 60 * 60 * 2 * 1000; // 2 heures
+const COOKIE_MAX_AGE = 60 * 60 * 2; // 2 heures
 
 /** Mot de passe de démo UNIQUEMENT en développement local. */
 const DEMO_PASSWORD = "jcf-admin";
@@ -36,9 +35,9 @@ export function getAuthSecret(): string | null {
 }
 
 function getPlainPassword(): string | null {
+  if (isProduction()) return null;
   const fromEnv = process.env.ADMIN_PASSWORD?.trim();
   if (fromEnv) return fromEnv;
-  if (isProduction()) return null;
   // Demo password only when neither hash nor password is configured
   if (!process.env.ADMIN_PASSWORD_HASH?.trim()) return DEMO_PASSWORD;
   return null;
@@ -94,13 +93,14 @@ export type AdminAuthStatus =
         | "no_cookie"
         | "bad_signature"
         | "expired"
-        | "idle"
         | "unconfigured"
         | "revoked";
     };
 
 export function isAdminConfigured(): boolean {
-  return Boolean(getPasswordHash() || process.env.ADMIN_PASSWORD?.trim());
+  return isProduction()
+    ? Boolean(getPasswordHash())
+    : Boolean(getPasswordHash() || process.env.ADMIN_PASSWORD?.trim());
 }
 
 export function isUsingDemoAuth(): boolean {
@@ -121,12 +121,14 @@ export function assertAuthSecretsReady(): { ok: true } | { ok: false; error: str
         "AUTH_SECRET manquant ou trop court (min. 32 caractères). Ne réutilisez pas le mot de passe.",
     };
   }
-  if (!getPasswordHash() && !process.env.ADMIN_PASSWORD?.trim()) {
+  if (!getPasswordHash()) {
     return {
       ok: false,
-      error: "ADMIN_PASSWORD_HASH (ou ADMIN_PASSWORD temporaire) requis en production.",
+      error: "ADMIN_PASSWORD_HASH est requis en production. ADMIN_PASSWORD n'est accepté qu'en développement local.",
     };
   }
+  const sessionStore = assertSessionStoreReady();
+  if (!sessionStore.ok) return sessionStore;
   return { ok: true };
 }
 
@@ -142,14 +144,24 @@ export async function checkAdminAuth(): Promise<AdminAuthStatus> {
     return { ok: false, reason: "no_cookie" };
   }
 
-  const session = await getSession(sessionId);
+  let session: AdminSession | null;
+  try {
+    session = await getSession(sessionId);
+  } catch (err) {
+    // An unavailable session store must deny access rather than turn into a
+    // server error that could mask a security configuration problem.
+    logSecurityEvent("admin.session_store_unavailable", {
+      error: err instanceof Error ? err.message : "unknown",
+    });
+    return { ok: false, reason: "unconfigured" };
+  }
   if (!session) return { ok: false, reason: "revoked" };
 
   const now = Date.now();
-  if (now > session.expiresAt) return { ok: false, reason: "expired" };
-  if (now - session.lastActivityAt > IDLE_MS) return { ok: false, reason: "idle" };
-
-  await touchSession(sessionId);
+  if (now > session.expiresAt || isSessionExpired(session)) {
+    await deleteSession(sessionId);
+    return { ok: false, reason: "expired" };
+  }
   return { ok: true, session };
 }
 
@@ -170,14 +182,14 @@ export async function setAdminCookie(meta?: {
     throw new Error("Admin auth not configured");
   }
 
-  const session = await createSession({
+  const { token } = await createSession({
     maxAgeSec: COOKIE_MAX_AGE,
     ip: meta?.ip,
     userAgent: meta?.userAgent,
   });
 
   const jar = await cookies();
-  jar.set(COOKIE_NAME, session.id, {
+  jar.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction(),
     sameSite: "lax",
@@ -185,7 +197,7 @@ export async function setAdminCookie(meta?: {
     maxAge: COOKIE_MAX_AGE,
   });
 
-  return session.id;
+  return token;
 }
 
 export async function clearAdminCookie(): Promise<void> {
