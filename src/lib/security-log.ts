@@ -8,6 +8,7 @@ export type SecurityEvent =
   | "admin.save"
   | "admin.upload"
   | "admin.auth.unconfigured"
+  | "admin.session_store_unavailable"
   | "contact.submit"
   | "contact.blocked";
 

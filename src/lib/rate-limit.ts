@@ -14,6 +14,10 @@ function upstashConfigured(): boolean {
   );
 }
 
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 const upstashLimiters = new Map<string, Ratelimit>();
 
 function getUpstashLimiter(limit: number, windowMs: number): Ratelimit {
@@ -57,8 +61,8 @@ function memoryRateLimit(
 }
 
 /**
- * Rate limit partagé : Upstash Redis en prod quand configuré,
- * fallback mémoire pour le développement local.
+ * Shared rate limiting is mandatory in production. Falling back to an
+ * in-process Map on a serverless deployment would silently remove protection.
  */
 export async function rateLimit(
   key: string,
@@ -81,10 +85,16 @@ export async function rateLimit(
       return { ok: false, retryAfterSec };
     } catch (err) {
       console.error(
-        "[rate-limit] upstash failed, falling back to memory",
+        "[rate-limit] upstash failed",
         err instanceof Error ? err.message : "unknown",
       );
+      if (isProduction()) return { ok: false, retryAfterSec: 60 };
     }
+  }
+
+  if (isProduction()) {
+    console.error("[rate-limit] Upstash is not configured in production");
+    return { ok: false, retryAfterSec: 60 };
   }
 
   return memoryRateLimit(key, limit, windowMs);

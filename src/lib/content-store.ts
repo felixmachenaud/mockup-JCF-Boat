@@ -104,7 +104,7 @@ async function fetchDocumentFromBlob(): Promise<StoredContentDocument | null> {
   } catch (err) {
     if (err instanceof Error && /not.?found/i.test(err.message)) return null;
     console.error("[content-store] blob read failed", err);
-    return null;
+    throw new Error("Content store unavailable");
   }
 }
 
