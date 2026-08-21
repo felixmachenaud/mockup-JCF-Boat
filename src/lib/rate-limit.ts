@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { getUpstashRedisConfig } from "@/lib/server-env";
 
 type Bucket = { count: number; resetAt: number };
 
@@ -8,10 +9,7 @@ const memoryBuckets = new Map<string, Bucket>();
 type LimitResult = { ok: true } | { ok: false; retryAfterSec: number };
 
 function upstashConfigured(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
-  );
+  return Boolean(getUpstashRedisConfig());
 }
 
 function isProduction(): boolean {
@@ -25,8 +23,12 @@ function getUpstashLimiter(limit: number, windowMs: number): Ratelimit {
   let limiter = upstashLimiters.get(key);
   if (!limiter) {
     const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
+    const redisConfig = getUpstashRedisConfig();
+    if (!redisConfig) {
+      throw new Error("Upstash Redis is not configured");
+    }
     limiter = new Ratelimit({
-      redis: Redis.fromEnv(),
+      redis: new Redis(redisConfig),
       limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
       prefix: "jcf-rl",
       analytics: false,

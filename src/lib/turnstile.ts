@@ -4,8 +4,10 @@
  * development. Public Vercel previews must not become a spam bypass.
  */
 
+import { readServerEnv } from "@/lib/server-env";
+
 export function isTurnstileConfigured(): boolean {
-  return Boolean(process.env.TURNSTILE_SECRET_KEY?.trim());
+  return Boolean(readServerEnv("TURNSTILE_SECRET_KEY"));
 }
 
 export function turnstileSiteKey(): string | null {
@@ -16,7 +18,7 @@ export async function verifyTurnstileToken(
   token: string | undefined,
   ip: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
+  const secret = readServerEnv("TURNSTILE_SECRET_KEY");
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
       console.error("[turnstile] TURNSTILE_SECRET_KEY missing — rejecting submit");

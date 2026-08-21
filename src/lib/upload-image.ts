@@ -2,14 +2,14 @@ import { put } from "@vercel/blob";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
+import { readServerEnv } from "@/lib/server-env";
 
 export const UPLOAD_PREFIX = "jcf-uploads";
 export const MEDIA_PROXY_PREFIX = "/api/media";
 
 function blobConfigured() {
-  return (
-    Boolean(process.env.BLOB_READ_WRITE_TOKEN) ||
-    Boolean(process.env.BLOB_STORE_ID)
+  return Boolean(
+    readServerEnv("BLOB_READ_WRITE_TOKEN") || readServerEnv("BLOB_STORE_ID"),
   );
 }
 

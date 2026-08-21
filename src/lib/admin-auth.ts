@@ -10,6 +10,7 @@ import {
   isSessionExpired,
 } from "@/lib/admin-sessions";
 import { logSecurityEvent } from "@/lib/security-log";
+import { readServerEnv } from "@/lib/server-env";
 
 const COOKIE_NAME = "jcf_admin";
 /** Absolute session lifetime */
@@ -27,24 +28,24 @@ function isProduction(): boolean {
  * Min 32 characters recommended.
  */
 export function getAuthSecret(): string | null {
-  const secret = process.env.AUTH_SECRET?.trim();
+  const secret = readServerEnv("AUTH_SECRET");
   if (secret && secret.length >= 32) return secret;
   if (isProduction()) return null;
   // Dev only fallback — never used when AUTH_SECRET is set
-  return process.env.AUTH_SECRET?.trim() || `dev-only-${DEMO_PASSWORD}-not-for-prod!!`;
+  return secret || `dev-only-${DEMO_PASSWORD}-not-for-prod!!`;
 }
 
 function getPlainPassword(): string | null {
   if (isProduction()) return null;
-  const fromEnv = process.env.ADMIN_PASSWORD?.trim();
+  const fromEnv = readServerEnv("ADMIN_PASSWORD");
   if (fromEnv) return fromEnv;
   // Demo password only when neither hash nor password is configured
-  if (!process.env.ADMIN_PASSWORD_HASH?.trim()) return DEMO_PASSWORD;
+  if (!readServerEnv("ADMIN_PASSWORD_HASH")) return DEMO_PASSWORD;
   return null;
 }
 
 function getPasswordHash(): string | null {
-  return process.env.ADMIN_PASSWORD_HASH?.trim() || null;
+  return readServerEnv("ADMIN_PASSWORD_HASH") || null;
 }
 
 /** Encode a password with scrypt for ADMIN_PASSWORD_HASH. */
@@ -100,14 +101,14 @@ export type AdminAuthStatus =
 export function isAdminConfigured(): boolean {
   return isProduction()
     ? Boolean(getPasswordHash())
-    : Boolean(getPasswordHash() || process.env.ADMIN_PASSWORD?.trim());
+    : Boolean(getPasswordHash() || readServerEnv("ADMIN_PASSWORD"));
 }
 
 export function isUsingDemoAuth(): boolean {
   return (
     !isProduction() &&
     !getPasswordHash() &&
-    !process.env.ADMIN_PASSWORD?.trim()
+    !readServerEnv("ADMIN_PASSWORD")
   );
 }
 

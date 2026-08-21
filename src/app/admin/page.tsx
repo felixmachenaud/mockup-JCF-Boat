@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import {
   assertAuthSecretsReady,
   checkAdminAuth,
@@ -11,8 +12,10 @@ import Editor from "./Editor";
 import LogoutButton from "./LogoutButton";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function AdminPage() {
+  await connection();
   const secrets = assertAuthSecretsReady();
   if (!secrets.ok) {
     return (

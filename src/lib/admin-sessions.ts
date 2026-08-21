@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
+import { getUpstashRedisConfig, readServerEnv } from "@/lib/server-env";
 
 /** The browser receives the raw token; only a keyed digest is persisted. */
 export type AdminSession = {
@@ -26,20 +27,21 @@ function isProduction(): boolean {
 }
 
 function redisConfigured(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
-  );
+  return Boolean(getUpstashRedisConfig());
 }
 
 function getRedis(): Redis {
-  return Redis.fromEnv();
+  const config = getUpstashRedisConfig();
+  if (!config) {
+    throw new Error("Upstash Redis is not configured");
+  }
+  return new Redis(config);
 }
 
 function tokenDigest(token: string): string {
   // AUTH_SECRET also acts as a server-side pepper. Rotating it invalidates
   // every existing session key without ever storing the raw browser token.
-  const secret = process.env.AUTH_SECRET?.trim();
+  const secret = readServerEnv("AUTH_SECRET");
   if (secret) return createHmac("sha256", secret).update(token).digest("hex");
   return createHash("sha256").update(token).digest("hex");
 }

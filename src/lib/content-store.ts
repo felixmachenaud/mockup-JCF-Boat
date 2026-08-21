@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { DEFAULT_CONTENT, mergeContent, type SiteContent } from "./site-content";
+import { readServerEnv } from "./server-env";
 
 const BLOB_KEY = "jcf-boat-site-content.json";
 const REVISION_PREFIX = "jcf-boat-revisions/";
@@ -25,9 +26,8 @@ export type StoredContentDocument = {
 };
 
 function blobConfigured() {
-  return (
-    Boolean(process.env.BLOB_READ_WRITE_TOKEN) ||
-    Boolean(process.env.BLOB_STORE_ID)
+  return Boolean(
+    readServerEnv("BLOB_READ_WRITE_TOKEN") || readServerEnv("BLOB_STORE_ID"),
   );
 }
 

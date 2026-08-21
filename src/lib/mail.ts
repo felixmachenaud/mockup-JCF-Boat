@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { readServerEnv } from "@/lib/server-env";
 
 export type MailPayload = {
   subject: string;
@@ -8,20 +9,22 @@ export type MailPayload = {
 };
 
 function requiredEnv(name: string): string {
-  const value = process.env[name]?.trim();
+  const value = readServerEnv(name);
   if (!value) throw new Error(`Variable d'environnement manquante: ${name}`);
   return value;
 }
 
 export function getMailConfig() {
-  const host = process.env.SMTP_HOST?.trim() || "ssl0.ovh.net";
-  const port = Number(process.env.SMTP_PORT || "465");
+  const host = readServerEnv("SMTP_HOST") || "ssl0.ovh.net";
+  const port = Number(readServerEnv("SMTP_PORT") || "465");
   const secure =
-    process.env.SMTP_SECURE === "false" ? false : port === 465 || process.env.SMTP_SECURE === "true";
+    readServerEnv("SMTP_SECURE") === "false"
+      ? false
+      : port === 465 || readServerEnv("SMTP_SECURE") === "true";
   const user = requiredEnv("SMTP_USER");
   const pass = requiredEnv("SMTP_PASS");
-  const from = process.env.SMTP_FROM?.trim() || user;
-  const to = process.env.CONTACT_TO?.trim() || user;
+  const from = readServerEnv("SMTP_FROM") || user;
+  const to = readServerEnv("CONTACT_TO") || user;
 
   return { host, port, secure, user, pass, from, to };
 }

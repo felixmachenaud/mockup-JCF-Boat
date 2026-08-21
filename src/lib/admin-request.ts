@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readServerEnv } from "@/lib/server-env";
 
 const ADMIN_API_PREFIX = "/api/admin";
 
@@ -17,7 +18,7 @@ export function assertSameOrigin(req: Request): NextResponse | null {
   }
 
   const allowed = new Set<string>([`https://${host}`, `http://${host}`]);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const siteUrl = readServerEnv("NEXT_PUBLIC_SITE_URL").replace(/\/$/, "");
   if (siteUrl) allowed.add(siteUrl);
 
   if (origin) {
