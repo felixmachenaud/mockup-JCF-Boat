@@ -2,7 +2,11 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
-import { getUpstashRedisConfig, readServerEnv } from "@/lib/server-env";
+import {
+  getUpstashRedisConfig,
+  getUpstashRedisPresence,
+  readServerEnv,
+} from "@/lib/server-env";
 
 /** The browser receives the raw token; only a keyed digest is persisted. */
 export type AdminSession = {
@@ -61,9 +65,10 @@ export function isSessionStoreConfigured(): boolean {
 
 export function assertSessionStoreReady(): { ok: true } | { ok: false; error: string } {
   if (!isProduction() || redisConfigured()) return { ok: true };
+  const presence = getUpstashRedisPresence();
   return {
     ok: false,
-    error: "UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN sont requis pour les sessions admin en production.",
+    error: `Redis est introuvable au runtime (URL ${presence.url ? "présente" : "absente"}, TOKEN ${presence.token ? "présent" : "absent"}). Ouvrez chaque variable Upstash dans Vercel, collez une valeur non vide, sauvegardez, puis Redeploy sans cache.`,
   };
 }
 

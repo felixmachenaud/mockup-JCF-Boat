@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  serverExternalPackages: ["sharp"],
+  serverExternalPackages: ["sharp", "@upstash/redis", "@upstash/ratelimit"],
   experimental: {
     proxyClientMaxBodySize: "10mb",
   },
