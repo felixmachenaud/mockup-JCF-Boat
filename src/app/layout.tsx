@@ -58,7 +58,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#2f97ad",
+  colorScheme: "normal",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#2f97ad" },
+    { media: "(prefers-color-scheme: dark)", color: "#2f97ad" },
+  ],
 };
 
 export default async function RootLayout({
@@ -69,9 +73,15 @@ export default async function RootLayout({
   const content = await getContent();
 
   return (
-    <html lang="fr" data-scroll-behavior="smooth" className="min-h-dvh">
+    <html
+      lang="fr"
+      data-scroll-behavior="smooth"
+      className="min-h-full"
+      style={{ backgroundColor: "#2f97ad" }}
+    >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-dvh flex-col antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-full flex-col antialiased`}
+        style={{ backgroundColor: "transparent" }}
       >
         {children}
         <BackButton />

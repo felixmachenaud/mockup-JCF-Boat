@@ -31,9 +31,9 @@ export function MobileNav() {
     <nav
       aria-label="Navigation mobile"
       className="fixed inset-x-0 bottom-0 z-50 md:hidden"
-      style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
-      <div className="mx-auto flex max-w-md justify-center px-4">
+      <div className="mx-auto flex max-w-md justify-center px-4 pb-1.5">
         <div className="flex w-full items-center justify-around gap-0.5 rounded-[1.35rem] border border-white/25 bg-black/70 px-1.5 py-1.5 shadow-[0_-4px_24px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
           {navItems.map(({ icon: Icon, label, href, match }) => {
             const isActive = match(pathname);

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #ffffff;
+  --color-background: #2f97ad;
   --color-foreground: #0f172a;
   --color-muted: #64748b;
   --color-primary: #0ea5e9;
@@ -21,11 +21,18 @@ html {
   scroll-padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
   overflow-x: clip;
   overscroll-behavior-y: none;
-  background-color: #2f97ad;
+  min-height: 100%;
+  min-height: 100lvh;
+  min-height: -webkit-fill-available;
+  background-color: #2f97ad !important;
+  background-image: url("/fond.jpg");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
 }
 
 body {
-  background: transparent;
+  background-color: transparent !important;
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -33,6 +40,9 @@ body {
   -webkit-tap-highlight-color: rgba(0, 212, 255, 0.15);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  min-height: 100%;
+  min-height: 100lvh;
+  min-height: -webkit-fill-available;
 }
 
 .pb-mobile-nav {
