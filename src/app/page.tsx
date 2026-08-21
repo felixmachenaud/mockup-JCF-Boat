@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getContent } from "@/lib/content-store";
-import { SITE_URL } from "@/lib/site-config";
+import { SHARE_IMAGE, SITE_URL } from "@/lib/site-config";
 import { HomePage } from "@/components/home-page";
 import { JsonLd } from "@/components/json-ld";
 import { buildOrganizationGraph } from "@/lib/schema";
@@ -16,12 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
       description: c.seo.homeDescription,
       url: SITE_URL,
       siteName: c.brand.name,
-      images: [{ url: "/mana23.1.jpg" }],
+      images: [SHARE_IMAGE],
       locale: "fr_FR",
     },
     twitter: {
       card: "summary_large_image",
-      images: ["/mana23.1.jpg"],
+      images: [SHARE_IMAGE.url],
     },
   };
 }

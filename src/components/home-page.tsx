@@ -26,7 +26,7 @@ export function HomePage({ content }: { content: SiteContent }) {
   };
 
   return (
-    <main className="relative min-h-screen pb-mobile-nav md:pb-0">
+    <main className="relative min-h-[100svh] pb-mobile-nav md:min-h-screen md:pb-0">
       <HashScrollHandler />
       <PageBackground />
       <RestOfPageBlur />

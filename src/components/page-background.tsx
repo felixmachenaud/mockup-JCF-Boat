@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function PageBackground() {
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10">
+    <div className="pointer-events-none fixed inset-0 -z-10 h-[100lvh] w-full">
       <Image
         src="/fond.jpg"
         alt=""

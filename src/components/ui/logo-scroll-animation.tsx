@@ -26,100 +26,148 @@ export function LogoScrollAnimation({
   secondaryCtaLabel = "Voir les bateaux",
   brandName = "JCF Boat",
 }: LogoScrollProps) {
+  return (
+    <>
+      <MobileHero
+        title={title}
+        subtitle={subtitle}
+        ctaLabel={ctaLabel}
+        secondaryCtaLabel={secondaryCtaLabel}
+        brandName={brandName}
+      />
+      <DesktopHero
+        title={title}
+        subtitle={subtitle}
+        ctaLabel={ctaLabel}
+        secondaryCtaLabel={secondaryCtaLabel}
+        brandName={brandName}
+      />
+    </>
+  );
+}
+
+function MobileHero({
+  title,
+  subtitle,
+  ctaLabel,
+  secondaryCtaLabel,
+  brandName,
+}: LogoScrollProps) {
+  return (
+    <section className="relative flex min-h-[100svh] w-full flex-col justify-between overflow-x-clip px-5 pt-[calc(5.25rem+env(safe-area-inset-top,0px))] pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:hidden">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center text-center">
+        <h1 className="hero-title text-[1.85rem] font-medium tracking-tight leading-[1.12] sm:text-[2.1rem]">
+          {title}
+        </h1>
+        {subtitle ? (
+          <p className="mt-3 max-w-[22rem] text-[0.9375rem] leading-relaxed text-white/75">
+            {subtitle}
+          </p>
+        ) : null}
+
+        <div className="relative mt-5 h-[11.5rem] w-full max-w-[18rem] sm:h-[13rem]">
+          <img
+            src="/logo_white.png"
+            alt={brandName}
+            draggable={false}
+            decoding="async"
+            fetchPriority="high"
+            className="pointer-events-none h-full w-full select-none object-contain"
+          />
+        </div>
+
+        <div className="mt-6 flex w-full flex-col gap-3">
+          <AvailabilityButton
+            size="hero"
+            href="/#contact"
+            label={ctaLabel}
+            className="w-full min-h-12 px-6 text-base"
+          />
+          <Link
+            href="/bateaux"
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/35 bg-black/35 px-6 text-base font-medium text-white backdrop-blur-sm"
+          >
+            {secondaryCtaLabel}
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DesktopHero({
+  title,
+  subtitle,
+  ctaLabel,
+  secondaryCtaLabel,
+  brandName,
+}: LogoScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 768px)");
+    const sync = () => setEnabled(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"],
   });
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    checkMobile();
-
-    window.addEventListener("resize", checkMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
-  }, []);
-
-  const rotateX = useTransform(
-    scrollYProgress,
-    [0.15, 0.55],
-    [isMobile ? 12 : 20, 0]
-  );
-
-  const scale = useTransform(
-    scrollYProgress,
-    [0.15, 0.55],
-    isMobile ? [0.75, 0.95] : [1.12, 1]
-  );
-
-  const translateY = useTransform(
-    scrollYProgress,
-    [0.15, 0.55],
-    [30, 0]
-  );
-
-  const titleTranslateY = useTransform(
-    scrollYProgress,
-    [0.15, 0.55],
-    [20, -8]
-  );
-
-  const titleOpacity = useTransform(
-    scrollYProgress,
-    [0.05, 0.25, 0.7],
-    [0, 1, 1]
-  );
+  const rotateX = useTransform(scrollYProgress, [0.15, 0.55], [20, 0]);
+  const scale = useTransform(scrollYProgress, [0.15, 0.55], [1.12, 1]);
+  const translateY = useTransform(scrollYProgress, [0.15, 0.55], [30, 0]);
+  const titleTranslateY = useTransform(scrollYProgress, [0.15, 0.55], [20, -8]);
+  const titleOpacity = useTransform(scrollYProgress, [0.05, 0.25, 0.7], [0, 1, 1]);
 
   return (
     <section
       ref={containerRef}
-      className="relative flex min-h-screen-safe w-full items-center justify-center overflow-x-hidden px-4 pb-4 pt-[calc(4.5rem+env(safe-area-inset-top))] md:min-h-[110vh] md:px-8 md:pb-12 md:pt-[calc(6.5rem+env(safe-area-inset-top,0px))]"
+      className="relative hidden min-h-[110vh] w-full items-center justify-center overflow-x-hidden px-8 pb-12 pt-[calc(6.5rem+env(safe-area-inset-top,0px))] md:flex"
     >
       <div
-        className="relative flex w-full max-w-[1500px] flex-col items-center justify-center md:mt-4"
-        style={{
-          perspective: "1200px",
-        }}
+        className="relative mt-4 flex w-full max-w-[1500px] flex-col items-center justify-center"
+        style={{ perspective: "1200px" }}
       >
         <motion.div
-          style={{
-            translateY: titleTranslateY,
-            opacity: titleOpacity,
-          }}
+          style={
+            enabled
+              ? { translateY: titleTranslateY, opacity: titleOpacity }
+              : undefined
+          }
           className="relative z-10 text-center"
         >
-          <ElectricTitle>{title}</ElectricTitle>
+          <h1 className="hero-title text-8xl font-medium tracking-tight lg:text-9xl">
+            {title}
+          </h1>
           {subtitle ? (
-            <p className="mx-auto mt-3 max-w-xl text-sm text-white/75 md:text-base">
+            <p className="mx-auto mt-3 max-w-xl text-base text-white/75">
               {subtitle}
             </p>
           ) : null}
         </motion.div>
 
-        <div className="-mt-2 w-full md:-mt-5 md:-translate-y-[2cm]">
-          <div className="relative -mt-6 w-full md:-mt-8">
+        <div className="-mt-5 w-full -translate-y-[2cm]">
+          <div className="relative -mt-8 w-full">
             <HeroWaves />
             <AnimatedLogo
               rotateX={rotateX}
               scale={scale}
               translateY={translateY}
-              brandName={brandName}
+              enabled={enabled}
+              brandName={brandName ?? "JCF Boat"}
             />
           </div>
 
-          <div className="relative z-10 mt-2 flex flex-wrap justify-center gap-3 -translate-y-[2cm] md:mt-4">
+          <div className="relative z-10 mt-4 flex flex-wrap justify-center gap-3 -translate-y-[2cm]">
             <AvailabilityButton size="hero" href="/#contact" label={ctaLabel} />
             <Link
               href="/bateaux"
-              className="hero-availability-btn inline-flex min-h-[3.75rem] items-center justify-center rounded-full border border-white/40 bg-black/30 px-10 text-lg font-medium text-white backdrop-blur-sm transition hover:bg-black/45 md:min-h-[4.5rem] md:px-12 md:text-xl"
+              className="hero-availability-btn inline-flex min-h-[4.5rem] items-center justify-center rounded-full border border-white/40 bg-black/30 px-12 text-xl font-medium text-white backdrop-blur-sm transition hover:bg-black/45"
             >
               {secondaryCtaLabel}
             </Link>
@@ -130,32 +178,34 @@ export function LogoScrollAnimation({
   );
 }
 
-interface AnimatedLogoProps {
-  rotateX: MotionValue<number>;
-  scale: MotionValue<number>;
-  translateY: MotionValue<number>;
-}
-
 function AnimatedLogo({
   rotateX,
   scale,
   translateY,
+  enabled,
   brandName,
-}: AnimatedLogoProps & { brandName: string }) {
+}: {
+  rotateX: MotionValue<number>;
+  scale: MotionValue<number>;
+  translateY: MotionValue<number>;
+  enabled: boolean;
+  brandName: string;
+}) {
   return (
     <motion.div
-      style={{
-        rotateX,
-        scale,
-        translateY,
-        transformStyle: "preserve-3d",
-      }}
-      className="relative z-[2] flex w-full items-center justify-center will-change-transform"
+      style={
+        enabled
+          ? {
+              rotateX,
+              scale,
+              translateY,
+              transformStyle: "preserve-3d",
+            }
+          : undefined
+      }
+      className="relative z-[2] flex w-full items-center justify-center"
     >
-      <div
-        className="logo-layer relative h-[280px] w-full max-w-[900px] sm:h-[360px] md:h-[500px] lg:h-[650px] lg:max-w-[1200px]"
-      >
-        {/* Native img preserves PNG alpha — next/image can flatten transparency */}
+      <div className="logo-layer relative h-[500px] w-full max-w-[900px] lg:h-[650px] lg:max-w-[1200px]">
         <img
           src="/logo_white.png"
           alt={brandName}
@@ -166,13 +216,5 @@ function AnimatedLogo({
         />
       </div>
     </motion.div>
-  );
-}
-
-function ElectricTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h1 className="hero-title text-[clamp(2rem,9vw,4rem)] font-medium tracking-tight md:text-8xl lg:text-9xl">
-      {children}
-    </h1>
   );
 }

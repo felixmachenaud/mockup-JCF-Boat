@@ -24,7 +24,7 @@ export function AvailabilityButton({
       className={cn(
         "inline-flex items-center justify-center rounded-full font-medium transition-colors active:scale-[0.98]",
         isHero
-          ? "hero-availability-btn group relative min-h-[3.75rem] overflow-hidden bg-white px-12 md:min-h-[4.5rem] md:px-14"
+          ? "hero-availability-btn group relative min-h-12 overflow-hidden bg-white px-6 md:min-h-[4.5rem] md:px-14"
           : "min-h-10 bg-sky-500 px-6 text-white hover:bg-sky-400 md:min-h-11 md:px-7",
         className,
       )}
@@ -33,7 +33,7 @@ export function AvailabilityButton({
         className={cn(
           "text-center leading-tight",
           isHero
-            ? "hero-availability-text relative z-10 max-w-[16rem] text-xl transition-transform duration-300 group-hover:scale-[1.02] md:max-w-none md:text-2xl lg:text-[1.75rem]"
+            ? "hero-availability-text relative z-10 max-w-[16rem] text-base transition-transform duration-300 md:max-w-none md:text-2xl md:group-hover:scale-[1.02] lg:text-[1.75rem]"
             : "max-w-[11rem] text-sm md:max-w-none md:text-base",
         )}
       >

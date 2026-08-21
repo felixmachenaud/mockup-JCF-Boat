@@ -62,7 +62,7 @@ export function SiteHeader({
     pathname.startsWith("/location-bateau-cassis");
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:top-5 md:pt-0">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] md:top-5 md:px-3 md:pt-0">
       {/* Mobile — barre compacte pleine largeur */}
       <div
         className={cn(

@@ -28,13 +28,13 @@ export function HeroScroll({
         brandName={brandName}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex justify-center md:bottom-8">
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 hidden justify-center md:flex">
         <a
           href="#bateaux"
-          className="pointer-events-auto flex min-h-11 flex-col items-center justify-center gap-1 rounded-full px-4 py-2 text-sm text-white/60 transition-colors active:bg-white/10 active:text-white"
+          className="pointer-events-auto flex min-h-11 flex-col items-center justify-center gap-1 rounded-full px-4 py-2 text-sm text-white/60 transition-colors hover:text-white"
         >
           <span>Découvrir</span>
-          <ChevronDown className="h-5 w-5 animate-bounce" />
+          <ChevronDown className="h-5 w-5" />
         </a>
       </div>
     </section>
