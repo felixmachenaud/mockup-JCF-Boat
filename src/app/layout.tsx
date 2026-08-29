@@ -1,19 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { BackButton } from "@/components/back-button";
 import { getContent } from "@/lib/content-store";
 import { SHARE_IMAGE, SITE_NAME, SITE_URL, getMetadataBaseUrl } from "@/lib/site-config";
+import { HERO_COLOR } from "@/lib/hero-assets";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -60,8 +58,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   colorScheme: "normal",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2f97ad" },
-    { media: "(prefers-color-scheme: dark)", color: "#2f97ad" },
+    { media: "(prefers-color-scheme: light)", color: HERO_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: HERO_COLOR },
   ],
 };
 
@@ -77,10 +75,10 @@ export default async function RootLayout({
       lang="fr"
       data-scroll-behavior="smooth"
       className="min-h-full"
-      style={{ backgroundColor: "#2f97ad" }}
+      style={{ backgroundColor: HERO_COLOR }}
     >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-full flex-col antialiased`}
+        className={`${geistSans.variable} flex min-h-full flex-col antialiased`}
         style={{ backgroundColor: "transparent" }}
       >
         {children}

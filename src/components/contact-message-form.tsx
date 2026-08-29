@@ -16,6 +16,7 @@ export function ContactMessageForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [captchaArmed, setCaptchaArmed] = useState(false);
   const onToken = useCallback((token: string | null) => setTurnstileToken(token), []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -58,7 +59,12 @@ export function ContactMessageForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-10 space-y-4" noValidate>
+    <form
+      onSubmit={onSubmit}
+      onFocusCapture={() => setCaptchaArmed(true)}
+      className="mt-10 space-y-4"
+      noValidate
+    >
       <div className="text-center sm:text-left">
         <p className="text-xs font-medium tracking-[0.2em] text-white/70 uppercase">
           Messagerie
@@ -137,7 +143,11 @@ export function ContactMessageForm() {
       />
 
       {turnstileSiteKey ? (
-        <TurnstileWidget siteKey={turnstileSiteKey} onToken={onToken} />
+        <TurnstileWidget
+          siteKey={turnstileSiteKey}
+          onToken={onToken}
+          armed={captchaArmed}
+        />
       ) : null}
 
       <p className="text-xs leading-relaxed text-white/50">

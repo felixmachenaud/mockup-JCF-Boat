@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 const VIEW_WIDTH = 2400;
 const VIEW_HEIGHT = 140;
 const CYCLES = 8;
 const AMPLITUDE = 16;
 const WAVELENGTH = VIEW_WIDTH / CYCLES;
-const SEGMENTS_PER_CYCLE = 32;
+const SEGMENTS_PER_CYCLE = 12;
 
 function buildSinePath(centerY: number, width: number): string {
   const totalSegments = CYCLES * SEGMENTS_PER_CYCLE;
@@ -28,9 +30,19 @@ const TOP_WAVE = buildSinePath(52, VIEW_WIDTH);
 const BOTTOM_WAVE = buildSinePath(88, VIEW_WIDTH);
 
 export function HeroWaves() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const start = () => setReady(true);
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 450));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(start);
+    return () => cancel(id);
+  }, []);
+
   return (
     <div
-      className="hero-waves pointer-events-none absolute inset-0 z-[1]"
+      className={`hero-waves pointer-events-none absolute inset-0 z-[1]${ready ? " hero-waves--ready" : ""}`}
       aria-hidden="true"
     >
       <div className="hero-waves__viewport absolute top-1/2 left-[calc(50%-50vw)] h-[min(14vw,90px)] w-screen -translate-y-1/2 sm:h-[min(12vw,100px)] md:h-[min(10vw,110px)]">

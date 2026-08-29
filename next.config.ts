@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { HERO_DESKTOP, HERO_LQIP, HERO_MOBILE } from "./src/lib/hero-assets";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -48,6 +49,20 @@ const securityHeaders = [
     : []),
 ];
 
+const hashedHeroCache = [
+  {
+    key: "Cache-Control",
+    value: "public, max-age=31536000, immutable",
+  },
+];
+
+const staticImageCache = [
+  {
+    key: "Cache-Control",
+    value: "public, max-age=2592000, stale-while-revalidate=86400",
+  },
+];
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
@@ -58,6 +73,7 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   images: {
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     localPatterns: [
       { pathname: "/api/media/**" },
       { pathname: "/**" },
@@ -118,6 +134,14 @@ const nextConfig: NextConfig = {
             value: "no-store",
           },
         ],
+      },
+      ...[HERO_DESKTOP, HERO_MOBILE, HERO_LQIP].map((source) => ({
+        source,
+        headers: hashedHeroCache,
+      })),
+      {
+        source: "/logo_white.png",
+        headers: staticImageCache,
       },
     ];
   },

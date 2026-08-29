@@ -1,5 +1,3 @@
-"use client";
-
 import type { SiteContent } from "@/lib/site-content";
 import { featuredBoats, publishedReviews, publishedTeam } from "@/lib/boats";
 import { PageBackground } from "@/components/page-background";

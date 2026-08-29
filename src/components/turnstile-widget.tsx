@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -20,16 +20,46 @@ declare global {
   }
 }
 
+const SCRIPT_SRC =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
 type TurnstileWidgetProps = {
   siteKey: string;
   onToken: (token: string | null) => void;
+  /** Charge tout de suite (focus formulaire). Sinon : intersection viewport. */
+  armed?: boolean;
 };
 
-export function TurnstileWidget({ siteKey, onToken }: TurnstileWidgetProps) {
+export function TurnstileWidget({
+  siteKey,
+  onToken,
+  armed = false,
+}: TurnstileWidgetProps) {
   const ref = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
+  const [inView, setInView] = useState(false);
+  const shouldLoad = armed || inView;
 
   useEffect(() => {
+    if (shouldLoad) return;
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "280px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     let cancelled = false;
 
     function render() {
@@ -50,7 +80,7 @@ export function TurnstileWidget({ siteKey, onToken }: TurnstileWidgetProps) {
     }
 
     const existing = document.querySelector<HTMLScriptElement>(
-      'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js"]',
+      'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]',
     );
     if (existing && window.turnstile) {
       render();
@@ -58,7 +88,7 @@ export function TurnstileWidget({ siteKey, onToken }: TurnstileWidgetProps) {
       existing.addEventListener("load", render);
     } else {
       const script = document.createElement("script");
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.src = SCRIPT_SRC;
       script.async = true;
       script.onload = render;
       document.head.appendChild(script);
@@ -74,7 +104,7 @@ export function TurnstileWidget({ siteKey, onToken }: TurnstileWidgetProps) {
         }
       }
     };
-  }, [siteKey, onToken]);
+  }, [shouldLoad, siteKey, onToken]);
 
-  return <div ref={ref} className="my-2" />;
+  return <div ref={ref} className="my-2 min-h-[65px]" />;
 }

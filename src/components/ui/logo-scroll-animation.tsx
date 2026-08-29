@@ -71,7 +71,8 @@ function MobileHero({
             alt={brandName}
             draggable={false}
             decoding="async"
-            fetchPriority="high"
+            width={288}
+            height={208}
             className="pointer-events-none h-full w-full select-none object-contain"
           />
         </div>
@@ -115,14 +116,13 @@ function DesktopHero({
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start end", "end start"],
+    offset: ["start start", "end start"],
   });
 
-  const rotateX = useTransform(scrollYProgress, [0.15, 0.55], [20, 0]);
-  const scale = useTransform(scrollYProgress, [0.15, 0.55], [1.12, 1]);
-  const translateY = useTransform(scrollYProgress, [0.15, 0.55], [30, 0]);
-  const titleTranslateY = useTransform(scrollYProgress, [0.15, 0.55], [20, -8]);
-  const titleOpacity = useTransform(scrollYProgress, [0.05, 0.25, 0.7], [0, 1, 1]);
+  const rotateX = useTransform(scrollYProgress, [0, 0.55], [0, 10]);
+  const scale = useTransform(scrollYProgress, [0, 0.55], [1, 0.94]);
+  const translateY = useTransform(scrollYProgress, [0, 0.55], [0, -16]);
+  const titleTranslateY = useTransform(scrollYProgress, [0, 0.55], [0, -24]);
 
   return (
     <section
@@ -134,11 +134,7 @@ function DesktopHero({
         style={{ perspective: "1200px" }}
       >
         <motion.div
-          style={
-            enabled
-              ? { translateY: titleTranslateY, opacity: titleOpacity }
-              : undefined
-          }
+          style={enabled ? { translateY: titleTranslateY } : undefined}
           className="relative z-10 text-center"
         >
           <h1 className="hero-title text-8xl font-medium tracking-tight lg:text-9xl">
@@ -211,7 +207,8 @@ function AnimatedLogo({
           alt={brandName}
           draggable={false}
           decoding="async"
-          fetchPriority="high"
+          width={1200}
+          height={650}
           className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
         />
       </div>

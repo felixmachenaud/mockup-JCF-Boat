@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useScroll, useTransform, motion, useMotionTemplate } from "framer-motion";
+import {
+  useScroll,
+  useTransform,
+  motion,
+  useMotionTemplate,
+  useMotionValueEvent,
+} from "framer-motion";
 
 export function RestOfPageBlur() {
   const [enabled, setEnabled] = useState(false);
@@ -19,11 +25,19 @@ export function RestOfPageBlur() {
 }
 
 function DesktopBlur() {
-  const { scrollYProgress } = useScroll();
+  const { scrollY, scrollYProgress } = useScroll();
+  const [active, setActive] = useState(false);
+
+  useMotionValueEvent(scrollY, "change", (y) => {
+    setActive(y > 24);
+  });
+
   const blur = useTransform(scrollYProgress, [0, 0.06, 0.22, 0.5], [0, 1.5, 4, 6]);
   const veil = useTransform(scrollYProgress, [0, 0.08, 0.25, 0.55], [0, 0.02, 0.05, 0.08]);
   const backdropFilter = useMotionTemplate`blur(${blur}px)`;
   const background = useMotionTemplate`rgba(255, 255, 255, ${veil})`;
+
+  if (!active) return null;
 
   return (
     <motion.div
