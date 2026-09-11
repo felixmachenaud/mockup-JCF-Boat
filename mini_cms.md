@@ -15,7 +15,7 @@ Un mini-CMS en 3 idées :
 2. **Defaults dans le code** + **surcharges JSON** dans Vercel Blob.
 3. **UI `/admin`** protégée par un mot de passe unique.
 
-**JCF Boat (prod)** : le mot de passe est stocké en **hash scrypt** (`ADMIN_PASSWORD_HASH`), les sessions vivent dans **Upstash Redis**, le cookie ne contient qu’un identifiant opaque (pas le HMAC du mot de passe).
+**JCF Boat (prod)** : le mot de passe est un **hash scrypt** (`ADMIN_PASSWORD_HASH`). Le cookie `jcf_admin` n’est plus un HMAC dérivé du mot de passe : c’est un **token opaque**. `AUTH_SECRET` sert toujours de **pepper HMAC-SHA256** pour le digest persisté (clé Redis) — le navigateur ne voit jamais ce digest.
 
 Le site public lit toujours `getContent()` = `merge(defaults, blob)`.  
 Si le Blob est vide ou partiel → le site reste intact grâce aux defaults.
@@ -31,8 +31,8 @@ Si le Blob est vide ou partiel → le site reste intact grâce aux defaults.
 /api/admin/login | logout | save | upload
         │
         ▼
-admin-auth.ts       ── cookie httpOnly `jcf_admin` (2 h)
-admin-sessions.ts   ── Redis Upstash (prod) / JSON local (dev)
+admin-auth.ts       ── cookie httpOnly `jcf_admin` (token opaque, 2 h)
+admin-sessions.ts   ── HMAC-SHA256(`AUTH_SECRET`, token) → clé Redis / JSON local
 content-store.ts    ── Vercel Blob (prod) / JSON local (dev)
         │
         ▼
@@ -50,7 +50,7 @@ Auth prod : `ADMIN_PASSWORD_HASH` + `AUTH_SECRET` (≥ 32) + Redis.
 | Fichier | Rôle |
 |---|---|
 | `src/lib/admin-auth.ts` | `ADMIN_PASSWORD_HASH` (prod), cookie session, `checkAdminAuth` |
-| `src/lib/admin-sessions.ts` | Store sessions Redis / JSON local, epoch de révocation |
+| `src/lib/admin-sessions.ts` | HMAC-SHA256(`AUTH_SECRET`, token) → Redis / JSON ; epoch de révocation |
 | `src/lib/site-content.ts` | Type `SiteContent`, defaults, `mergeContent` |
 | `src/lib/content-store.ts` | `getContent` / `saveContent` via `@vercel/blob` |
 | `src/lib/content.ts` *(optionnel)* | Seed métier (photos, IDs tiers) non éditable ou partiellement |
@@ -166,10 +166,10 @@ function preferArray<T>(candidate: T[] | undefined, fallback: T[]): T[] {
 
 - Un seul opérateur → un seul mot de passe.
 - **Production** : `ADMIN_PASSWORD_HASH` (scrypt `N=16384`) généré par `npm run hash-admin-password`. `ADMIN_PASSWORD` est **refusé**.
-- **Production** : `AUTH_SECRET` ≥ 32 caractères, distinct du mot de passe. Il poivre le digest Redis du token de session.
-- Cookie `jcf_admin` : identifiant opaque `httpOnly` + `secure` (prod) + `sameSite: 'lax'`. Durée **2 heures**.
-- Sessions : **Upstash Redis** en prod (`jcf-admin-session:…` + clé `epoch` pour tout révoquer). JSON `data/admin-sessions.json` en local.
-- Comparaison mot de passe / hash avec `timingSafeEqual` (scrypt) ; fallback HMAC local si hash absent.
+- **Production** : `AUTH_SECRET` ≥ 32 caractères, distinct du mot de passe. Pepper **HMAC-SHA256** du token de session (clé Redis). Rotating `AUTH_SECRET` invalide toutes les sessions.
+- Cookie `jcf_admin` : **token opaque** `httpOnly` + `secure` (prod) + `sameSite: 'lax'`. Durée **2 heures**. Ce n’est plus un cookie HMAC dérivé du mot de passe.
+- Sessions : **Upstash Redis** en prod (`jcf-admin-session:<digest>` + clé `epoch` pour tout révoquer). JSON `data/admin-sessions.json` en local.
+- Vérif mot de passe : `timingSafeEqual` sur le hash scrypt. En local seulement, si pas de hash : comparaison HMAC de `ADMIN_PASSWORD` (clair).
 - Rate-limit login + formulaires : Redis en prod, mémoire en local. Sans Redis en prod → fail-closed.
 
 ---
@@ -253,7 +253,7 @@ Labels admin en **français**, et indiquer **où** le texte apparaît sur le sit
 Lis mini_cms.md à la racine. Implémente ce mini-CMS maison pour ce site :
 - auth : ADMIN_PASSWORD_HASH (scrypt) en prod, ADMIN_PASSWORD seulement en local
 - sessions Redis Upstash en prod (JSON local en dev)
-- AUTH_SECRET ≥ 32, jamais égal au mot de passe
+- cookie opaque + HMAC-SHA256(AUTH_SECRET, token) pour la clé de session (pas un HMAC du mot de passe)
 - SiteContent + defaults + mergeContent
 - Vercel Blob content-store
 - /admin Editor par onglets

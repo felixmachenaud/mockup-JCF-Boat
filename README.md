@@ -27,7 +27,7 @@ npm run dev
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | oui | Canonical, sitemap, CORS same-origin |
 | `ADMIN_PASSWORD_HASH` | oui | Hash scrypt du mot de passe `/admin`. **Jamais** `ADMIN_PASSWORD` en prod |
-| `AUTH_SECRET` | oui | ≥ 32 caractères, **distinct** du mot de passe. Pepper HMAC des sessions |
+| `AUTH_SECRET` | oui | ≥ 32 caractères, **distinct** du mot de passe. Pepper **HMAC-SHA256** du digest de session (clé Redis). N’est plus le secret d’un cookie dérivé du mot de passe |
 | `UPSTASH_REDIS_REST_URL` | oui | Sessions admin + rate-limit |
 | `UPSTASH_REDIS_REST_TOKEN` | oui | Idem |
 | `BLOB_READ_WRITE_TOKEN` (ou `BLOB_STORE_ID`) | oui | JSON CMS + photos |
