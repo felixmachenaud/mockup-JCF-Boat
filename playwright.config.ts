@@ -48,6 +48,8 @@ export default defineConfig({
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "",
       UPSTASH_REDIS_REST_URL: "",
       UPSTASH_REDIS_REST_TOKEN: "",
+      KV_REST_API_URL: "",
+      KV_REST_API_TOKEN: "",
       BLOB_READ_WRITE_TOKEN: "",
       BLOB_STORE_ID: "",
     },

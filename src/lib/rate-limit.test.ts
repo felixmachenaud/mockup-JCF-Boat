@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pruneRateLimits, rateLimit } from "@/lib/rate-limit";
 
+function stubNoRedis() {
+  vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+  vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+  vi.stubEnv("KV_REST_API_URL", "");
+  vi.stubEnv("KV_REST_API_TOKEN", "");
+}
+
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
@@ -10,8 +17,7 @@ afterEach(() => {
 describe("rateLimit (mémoire, hors production)", () => {
   it("laisse passer jusqu'à la limite puis bloque", async () => {
     vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    stubNoRedis();
     const key = `unit-${Math.random().toString(16).slice(2)}`;
 
     for (let i = 0; i < 5; i++) {
@@ -28,8 +34,7 @@ describe("rateLimit (mémoire, hors production)", () => {
 
   it("réouvre la fenêtre une fois expirée", async () => {
     vi.stubEnv("NODE_ENV", "test");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    stubNoRedis();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
 
@@ -45,10 +50,7 @@ describe("rateLimit (mémoire, hors production)", () => {
 
   it("refuse en production si Redis n'est pas configuré", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
-    vi.stubEnv("KV_REST_API_URL", "");
-    vi.stubEnv("KV_REST_API_TOKEN", "");
+    stubNoRedis();
     const result = await rateLimit("prod-key", { limit: 5, windowMs: 60_000 });
     expect(result.ok).toBe(false);
   });
