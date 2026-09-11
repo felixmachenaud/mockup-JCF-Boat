@@ -1,3 +1,5 @@
+import path from "node:path";
+
 /**
  * Read a server secret from the real Node process at request time.
  *
@@ -42,4 +44,13 @@ export function getUpstashRedisConfig(): { url: string; token: string } | null {
   ).trim();
   if (!url || !token) return null;
   return { url, token };
+}
+
+/** Local JSON fallback for CMS + sessions (dev / tests). Ignored in production. */
+export function getDataDir(): string {
+  const override = readServerEnv("JCF_DATA_DIR");
+  if (!override) return path.join(process.cwd(), "data");
+  return path.isAbsolute(override)
+    ? override
+    : path.join(process.cwd(), override);
 }

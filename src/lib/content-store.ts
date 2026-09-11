@@ -3,14 +3,20 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { DEFAULT_CONTENT, mergeContent, type SiteContent } from "./site-content";
-import { readServerEnv } from "./server-env";
+import { getDataDir, readServerEnv } from "./server-env";
 
 const BLOB_KEY = "jcf-boat-site-content.json";
 const REVISION_PREFIX = "jcf-boat-revisions/";
 const CACHE_TAG = "jcf-site-content";
-const LOCAL_PATH = path.join(process.cwd(), "data", "site-content.json");
-const LOCAL_REVISIONS_DIR = path.join(process.cwd(), "data", "revisions");
 const MAX_REVISIONS = 30;
+
+function localContentPath() {
+  return path.join(getDataDir(), "site-content.json");
+}
+
+function localRevisionsDir() {
+  return path.join(getDataDir(), "revisions");
+}
 
 const REVALIDATE_PROFILE = { expire: 0 } as const;
 
@@ -79,7 +85,7 @@ function parseStoredDocument(raw: unknown): StoredContentDocument {
 
 async function readLocalDocument(): Promise<StoredContentDocument | null> {
   try {
-    const raw = await fs.readFile(LOCAL_PATH, "utf8");
+    const raw = await fs.readFile(localContentPath(), "utf8");
     return parseStoredDocument(JSON.parse(raw));
   } catch {
     return null;
@@ -87,8 +93,9 @@ async function readLocalDocument(): Promise<StoredContentDocument | null> {
 }
 
 async function writeLocalDocument(doc: StoredContentDocument): Promise<void> {
-  await fs.mkdir(path.dirname(LOCAL_PATH), { recursive: true });
-  await fs.writeFile(LOCAL_PATH, JSON.stringify(doc, null, 2), "utf8");
+  const file = localContentPath();
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(doc, null, 2), "utf8");
 }
 
 async function fetchDocumentFromBlob(): Promise<StoredContentDocument | null> {
@@ -163,19 +170,20 @@ async function writeRevisionSnapshot(
     return;
   }
 
-  await fs.mkdir(LOCAL_REVISIONS_DIR, { recursive: true });
+  const revisionsDir = localRevisionsDir();
+  await fs.mkdir(revisionsDir, { recursive: true });
   await fs.writeFile(
-    path.join(LOCAL_REVISIONS_DIR, `${stamp}.json`),
+    path.join(revisionsDir, `${stamp}.json`),
     payload,
     "utf8",
   );
   try {
-    const files = (await fs.readdir(LOCAL_REVISIONS_DIR))
+    const files = (await fs.readdir(revisionsDir))
       .filter((f) => f.endsWith(".json"))
       .sort();
     const excess = files.length - MAX_REVISIONS;
     for (let i = 0; i < excess; i++) {
-      await fs.unlink(path.join(LOCAL_REVISIONS_DIR, files[i]!));
+      await fs.unlink(path.join(revisionsDir, files[i]!));
     }
   } catch {
     // ignore

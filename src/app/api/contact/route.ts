@@ -1,54 +1,20 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   assertContentLength,
   assertSameOrigin,
   genericServerError,
   getClientIp,
 } from "@/lib/admin-request";
+import {
+  contactPayloadSchema,
+  isBookingDateAllowed,
+} from "@/lib/contact-schema";
 import { formatMailRows, sendMail } from "@/lib/mail";
 import { pruneRateLimits, rateLimit } from "@/lib/rate-limit";
 import { logSecurityEvent } from "@/lib/security-log";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const MAX_BODY_BYTES = 20_000;
-
-const baseSchema = z.object({
-  name: z.string().trim().min(2).max(80),
-  email: z.string().trim().email().max(120),
-  phone: z.string().trim().max(40).default(""),
-  website: z.string().default(""), // honeypot
-  turnstileToken: z.string().max(2048).optional(),
-});
-
-const messageSchema = baseSchema.extend({
-  type: z.literal("message"),
-  message: z.string().trim().min(10).max(3000),
-});
-
-const bookingSchema = baseSchema.extend({
-  type: z.literal("booking"),
-  phone: z.string().trim().min(8).max(40),
-  boatName: z.string().trim().min(2).max(120),
-  date: z
-    .string()
-    .trim()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
-  period: z.string().trim().min(2).max(120),
-  passengers: z.coerce.number().int().min(1).max(20),
-  notes: z.string().trim().max(2000).default(""),
-});
-
-const payloadSchema = z.discriminatedUnion("type", [messageSchema, bookingSchema]);
-
-function parisTodayISO(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Paris",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
 
 export async function POST(req: Request) {
   const originError = assertSameOrigin(req);
@@ -81,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
 
-  const parsed = payloadSchema.safeParse(json);
+  const parsed = contactPayloadSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Merci de vérifier les champs du formulaire." },
@@ -121,7 +87,7 @@ export async function POST(req: Request) {
   }
 
   if (data.type === "booking") {
-    if (data.date < parisTodayISO()) {
+    if (!isBookingDateAllowed(data.date)) {
       return NextResponse.json(
         { error: "La date de réservation doit être aujourd'hui ou ultérieure." },
         { status: 400 },

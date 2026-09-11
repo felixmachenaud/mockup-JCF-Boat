@@ -30,6 +30,10 @@ export function getMailConfig() {
 }
 
 export async function sendMail(payload: MailPayload): Promise<void> {
+  if (process.env.NODE_ENV !== "production" && readServerEnv("SMTP_DRY_RUN") === "1") {
+    return;
+  }
+
   const config = getMailConfig();
 
   const transporter = nodemailer.createTransport({
