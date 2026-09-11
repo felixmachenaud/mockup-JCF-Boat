@@ -13,7 +13,9 @@ Un mini-CMS en 3 idées :
 
 1. **Schéma TypeScript** (`SiteContent`) = tous les textes éditables.
 2. **Defaults dans le code** + **surcharges JSON** dans Vercel Blob.
-3. **UI `/admin`** protégée par un mot de passe unique (cookie HMAC).
+3. **UI `/admin`** protégée par un mot de passe unique.
+
+**JCF Boat (prod)** : le mot de passe est un **hash scrypt** (`ADMIN_PASSWORD_HASH`). Le cookie `jcf_admin` n’est plus un HMAC dérivé du mot de passe : c’est un **token opaque**. `AUTH_SECRET` sert toujours de **pepper HMAC-SHA256** pour le digest persisté (clé Redis) — le navigateur ne voit jamais ce digest.
 
 Le site public lit toujours `getContent()` = `merge(defaults, blob)`.  
 Si le Blob est vide ou partiel → le site reste intact grâce aux defaults.
@@ -26,24 +28,29 @@ Si le Blob est vide ou partiel → le site reste intact grâce aux defaults.
 /admin (Editor + Login)
         │
         ▼
-/api/admin/login | logout | save
+/api/admin/login | logout | save | upload
         │
         ▼
-admin-auth.ts  ── cookie HMAC (httpOnly, 30 j)
-content-store.ts ── Vercel Blob (site-content.json)
+admin-auth.ts       ── cookie httpOnly `jcf_admin` (token opaque, 2 h)
+admin-sessions.ts   ── HMAC-SHA256(`AUTH_SECRET`, token) → clé Redis / JSON local
+content-store.ts    ── Vercel Blob (prod) / JSON local (dev)
         │
         ▼
 site-content.ts ── SiteContent + DEFAULT_CONTENT + mergeContent()
         │
         ▼
-app/page.tsx + components/sections/* ── props typées uniquement
+app/page.tsx + components ── props typées uniquement
 ```
+
+Auth prod : `ADMIN_PASSWORD_HASH` + `AUTH_SECRET` (≥ 32) + Redis.  
+`ADMIN_PASSWORD` en clair n’est accepté qu’en développement local.
 
 ### Fichiers à créer (checklist)
 
 | Fichier | Rôle |
 |---|---|
-| `src/lib/admin-auth.ts` | `ADMIN_PASSWORD`, cookie signé, `checkAdminAuth` |
+| `src/lib/admin-auth.ts` | `ADMIN_PASSWORD_HASH` (prod), cookie session, `checkAdminAuth` |
+| `src/lib/admin-sessions.ts` | HMAC-SHA256(`AUTH_SECRET`, token) → Redis / JSON ; epoch de révocation |
 | `src/lib/site-content.ts` | Type `SiteContent`, defaults, `mergeContent` |
 | `src/lib/content-store.ts` | `getContent` / `saveContent` via `@vercel/blob` |
 | `src/lib/content.ts` *(optionnel)* | Seed métier (photos, IDs tiers) non éditable ou partiellement |
@@ -61,14 +68,25 @@ app/page.tsx + components/sections/* ── props typées uniquement
 ## 3. Variables d’environnement (Vercel)
 
 ```bash
-ADMIN_PASSWORD=          # obligatoire — openssl rand -base64 24
-AUTH_SECRET=             # recommandé — sinon ADMIN_PASSWORD sert de secret HMAC
+# Auth admin — OBLIGATOIRE en production
+ADMIN_PASSWORD_HASH=   # npm run hash-admin-password -- "mot-de-passe-fort"
+AUTH_SECRET=           # openssl rand -base64 32 — jamais égal au mot de passe
+
+# Interdit en production : ADMIN_PASSWORD (clair, local only)
+
+# Sessions + rate-limit — OBLIGATOIRE en production
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# Contenu CMS + médias
 BLOB_READ_WRITE_TOKEN=   # auto si Storage → Blob attaché au projet
 # ou BLOB_STORE_ID=      # stores Blob modernes (OIDC Vercel)
 ```
 
-- Pas de `ADMIN_PASSWORD` → `/admin` affiche « non configuré ».
-- Pas de Blob → l’éditeur s’ouvre mais **Enregistrer** échoue (503).
+- Pas de `ADMIN_PASSWORD_HASH` en prod → `/admin` affiche « non configuré ».
+- Pas de Redis en prod → login / sessions refusés (503).
+- Pas de Blob en prod → l’éditeur s’ouvre éventuellement mais **Enregistrer** échoue (503).
+- En local sans Blob / Redis : JSON dans `data/` (ou `JCF_DATA_DIR`).
 
 ---
 
@@ -144,13 +162,15 @@ function preferArray<T>(candidate: T[] | undefined, fallback: T[]): T[] {
 
 ---
 
-## 6. Auth (résumé)
+## 6. Auth (résumé) — JCF Boat
 
-- Un seul opérateur (ou couple) → un seul mot de passe.
-- Cookie `httpOnly` + `secure` (prod) + `sameSite: 'lax'`.
-- Payload : `issuedAt.hmacSha256(secret)`.
-- Comparaison mot de passe / signature avec `timingSafeEqual`.
-- Durée typique : 30 jours.
+- Un seul opérateur → un seul mot de passe.
+- **Production** : `ADMIN_PASSWORD_HASH` (scrypt `N=16384`) généré par `npm run hash-admin-password`. `ADMIN_PASSWORD` est **refusé**.
+- **Production** : `AUTH_SECRET` ≥ 32 caractères, distinct du mot de passe. Pepper **HMAC-SHA256** du token de session (clé Redis). Rotating `AUTH_SECRET` invalide toutes les sessions.
+- Cookie `jcf_admin` : **token opaque** `httpOnly` + `secure` (prod) + `sameSite: 'lax'`. Durée **2 heures**. Ce n’est plus un cookie HMAC dérivé du mot de passe.
+- Sessions : **Upstash Redis** en prod (`jcf-admin-session:<digest>` + clé `epoch` pour tout révoquer). JSON `data/admin-sessions.json` en local.
+- Vérif mot de passe : `timingSafeEqual` sur le hash scrypt. En local seulement, si pas de hash : comparaison HMAC de `ADMIN_PASSWORD` (clair).
+- Rate-limit login + formulaires : Redis en prod, mémoire en local. Sans Redis en prod → fail-closed.
 
 ---
 
@@ -192,7 +212,7 @@ Labels admin en **français**, et indiquer **où** le texte apparaît sur le sit
 [ ] Brancher getContent() dans page.tsx (et layouts si besoin)
 [ ] Builder Editor.tsx (1 onglet = 1 zone)
 [ ] Routes API login / logout / save
-[ ] Vercel : ADMIN_PASSWORD + Blob store
+[ ] Vercel : `ADMIN_PASSWORD_HASH` + `AUTH_SECRET` + Redis Upstash + Blob store
 [ ] Smoke test : login → edit titre → save → hard refresh
 [ ] (Optionnel) pages légales hors CMS : /mentions-legales, /cgv, /confidentialite
 ```
@@ -231,7 +251,9 @@ Labels admin en **français**, et indiquer **où** le texte apparaît sur le sit
 
 ```
 Lis mini_cms.md à la racine. Implémente ce mini-CMS maison pour ce site :
-- auth password + cookie HMAC
+- auth : ADMIN_PASSWORD_HASH (scrypt) en prod, ADMIN_PASSWORD seulement en local
+- sessions Redis Upstash en prod (JSON local en dev)
+- cookie opaque + HMAC-SHA256(AUTH_SECRET, token) pour la clé de session (pas un HMAC du mot de passe)
 - SiteContent + defaults + mergeContent
 - Vercel Blob content-store
 - /admin Editor par onglets
@@ -244,6 +266,6 @@ Ne change pas le layout / l’organisation visuelle des sections.
 ## 13. Référence d’implémentation
 
 Projet modèle : `carcassonne-bastide-t3`  
-Fichiers clés : `src/lib/{admin-auth,site-content,content-store}.ts`, `src/app/admin/`, `src/app/api/admin/`.
+Fichiers clés : `src/lib/{admin-auth,admin-sessions,site-content,content-store}.ts`, `src/app/admin/`, `src/app/api/admin/`.
 
 Skill Cursor (si installé) : `mini-cms-maison`.

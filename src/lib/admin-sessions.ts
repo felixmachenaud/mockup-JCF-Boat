@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Redis } from "@upstash/redis";
 import {
+  getDataDir,
   getUpstashRedisConfig,
   getUpstashRedisPresence,
   readServerEnv,
@@ -24,7 +25,10 @@ type LocalSessionStore = {
 
 const SESSION_PREFIX = "jcf-admin-session";
 const SESSION_EPOCH_KEY = `${SESSION_PREFIX}:epoch`;
-const LOCAL_PATH = path.join(process.cwd(), "data", "admin-sessions.json");
+
+function localSessionPath() {
+  return path.join(getDataDir(), "admin-sessions.json");
+}
 
 function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
@@ -74,7 +78,7 @@ export function assertSessionStoreReady(): { ok: true } | { ok: false; error: st
 
 async function readLocalStore(): Promise<LocalSessionStore> {
   try {
-    const raw = await fs.readFile(LOCAL_PATH, "utf8");
+    const raw = await fs.readFile(localSessionPath(), "utf8");
     const parsed = JSON.parse(raw) as Partial<LocalSessionStore>;
     return {
       epoch: Number(parsed.epoch) || 1,
@@ -86,8 +90,9 @@ async function readLocalStore(): Promise<LocalSessionStore> {
 }
 
 async function writeLocalStore(store: LocalSessionStore): Promise<void> {
-  await fs.mkdir(path.dirname(LOCAL_PATH), { recursive: true });
-  await fs.writeFile(LOCAL_PATH, JSON.stringify(store), "utf8");
+  const file = localSessionPath();
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(store), "utf8");
 }
 
 async function currentEpoch(redis: Redis): Promise<number> {

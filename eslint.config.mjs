@@ -12,6 +12,9 @@ const eslintConfig = [
       "private/**",
       "devis/**",
       "public/uploads/**",
+      "playwright-report/**",
+      "test-results/**",
+      ".e2e-data/**",
     ],
   },
 ];

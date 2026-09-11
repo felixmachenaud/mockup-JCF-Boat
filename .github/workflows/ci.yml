@@ -10,17 +10,28 @@ permissions:
 
 jobs:
   quality:
-    name: Lint, types, dependency audit and build
+    name: Lint, types, tests, audit and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      # Lockfile is generated with npm 11 (local). GHA Node 22 ships npm 10.9, which fails npm ci.
+      - run: npm install -g npm@11.6.2
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm test
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          CI: true
       - run: npm run build -- --webpack
